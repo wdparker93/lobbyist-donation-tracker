@@ -1,0 +1,18 @@
+Useful links:
+
+1. Deploy a barebones React app: https://www.makeuseof.com/how-to-deploy-react-app-with-github-pages/
+2. Get React app hosted on Google Cloud: https://www.codingdeft.com/posts/react-deploy-google-cloud-app-engine/
+3. Track congressional voting at Congress.gov: https://www.congress.gov/
+    a. Vote for Assault Weapons Ban of 2022: https://clerk.house.gov/Votes/2022410
+4. Host React app on Heroku: https://stackabuse.com/how-to-deploy-a-react-app-to-heroku/
+5. Deploy React app to Heroku via Docker: https://devcenter.heroku.com/categories/deploying-with-docker
+6. Connect Heroku to Github: https://devcenter.heroku.com/articles/github-integration
+
+
+Strategy:
+
+1. Scrape and process data from congress.gov using Python.
+2. Encode votes into database entries
+    a. Use Java?
+3. Create searchable criteria for votes into matters that people can access without esoteric knowledge.
+4. Ability to take HTML input, convert into JS, and use Java to access relational database.
