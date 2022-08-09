@@ -1,38 +1,91 @@
 .App {
-  text-align: center;
+  background-image: url("https://cdn.theatlantic.com/thumbor/NMuWEbGf8Se9P7NCpki45cbaRMQ=/0x0:2500x1406/1600x900/media/img/mt/2022/03/GettyImages_1238851441_01/original.jpg");
+  background-size: cover;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.header {
+  position: relative;
+  top: 3vh;
+  left: 3vw;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+#main-headers {
+  display: flex;
+  flex-direction: row;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+#secondary-headers {
+  display: flex;
+  flex-direction: row;
+}
+
+#data-source-title {
+  margin-left: auto;
+  position: relative;
+  right: 6vw;
+}
+
+#secondary-title {
+  align-self: flex-start;
+  flex-basis: 50vw;
+}
+
+#data-source-explanation {
+  margin-left: auto;
+  position: relative;
+  right: 6vw;
+  flex-basis: 40vw;
+  text-align: right;
+}
+
+#congress-gov-link {
+  color: purple;
+}
+
+#divider-wrapper {
+  position: relative;
+  top: 4vh;
+}
+
+#header-selection-dividers {
+  display: flex;
+  flex-direction: row;
+}
+
+#header-selection-divider-1 {
+  width: 36vw;
+  position: relative;
+  left: 3vw;
+}
+
+#header-selection-divider-2 {
+  width: 36vw;
+  position: relative;
+  right: 3vw;
+}
+
+.selector-wrapper {
+  position: relative;
+  left: 3vw;
+  top: 2vh;
+}
+
+#state-selector-label {
+  color: white;
+  font-size: 2.5vh;
+  position: relative;
+  top: 2vh;
+}
+
+#issue-selector-label {
+  color: white;
+  font-size: 2.5vh;
+  position: relative;
+  top: 2vh;
 }
