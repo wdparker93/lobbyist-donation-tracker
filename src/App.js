@@ -1,6 +1,10 @@
 import "./App.css";
+import Axios from "axios";
+import React, { useState, useEffect } from "react";
 
 function App() {
+  const [state, getState] = useState("");
+
   return (
     <div className="App">
       <div className="header" id="main-header">
@@ -100,6 +104,9 @@ function App() {
             <option>Immigration</option>
           </datalist>
         </div>
+      </div>
+      <div className="search-button-wrapper">
+        <button id="search-button">Search</button>
       </div>
     </div>
   );

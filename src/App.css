@@ -89,3 +89,9 @@
   position: relative;
   top: 2vh;
 }
+
+.search-button-wrapper {
+  position: relative;
+  left: 3vw;
+  top: 6vh;
+}
