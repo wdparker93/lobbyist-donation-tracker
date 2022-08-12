@@ -3,7 +3,35 @@ import Axios from "axios";
 import React, { useState, useEffect } from "react";
 
 function App() {
-  const [state, getState] = useState("");
+  const [usState, setUsState] = useState("");
+  const [senatorData, setSenatorData] = useState([]);
+
+  const handleClick = (event) => {
+    event.preventDefault();
+    getSenatorByState();
+    //console.log("handleClick with: " + usState);
+  };
+
+  const handleChange = (event) => {
+    setUsState(event.target.value);
+    //console.log("value is: " + event.target.value);
+  };
+
+  const getSenatorByState = () => {
+    //console.log(usState);
+    Axios.get("http://localhost:3001/api/get/" + usState).then((response) => {
+      //console.log(response.data[0]);
+      setSenatorData(response.data[0]);
+    });
+  };
+
+  /*
+  useEffect(() => {
+    Axios.get("http://localhost:3001/api/get").then((response) => {
+      console.log(response.data);
+    });
+  }, []);
+  */
 
   return (
     <div className="App">
@@ -34,9 +62,9 @@ function App() {
       </div>
       <br></br>
       <div id="selection-criteria-wrapper">
-        <div class="selector-wrapper" id="state-selector-wrapper">
+        <div className="selector-wrapper" id="state-selector-wrapper">
           <p id="state-selector-label">Select State</p>
-          <select id="state-selector">
+          <select id="state-selector" onChange={handleChange}>
             <option value="--">--</option>
             <option value="AL">Alabama</option>
             <option value="AK">Alaska</option>
@@ -90,7 +118,7 @@ function App() {
             <option value="WY">Wyoming</option>
           </select>
         </div>
-        <div class="selector-wrapper" id="issue-selector-wrapper">
+        <div className="selector-wrapper" id="issue-selector-wrapper">
           <p id="issue-selector-label">Select Issue or Enter Custom</p>
           <input type="text" list="issue-list" />
           <datalist id="issue-list">
@@ -106,7 +134,15 @@ function App() {
         </div>
       </div>
       <div className="search-button-wrapper">
-        <button id="search-button">Search</button>
+        <button id="search-button" onClick={handleClick}>
+          Get Data
+        </button>
+      </div>
+      <div id="output-window">
+        <p id="output-text">
+          Senator {senatorData.SEN_FIRST_NAME} {senatorData.SEN_LAST_NAME} of{" "}
+          {senatorData.STATE} is cool.
+        </p>
       </div>
     </div>
   );

@@ -95,3 +95,22 @@
   left: 3vw;
   top: 6vh;
 }
+
+#search-button {
+  font-size: 1.5vh;
+}
+
+#output-window {
+  background-color: aliceblue;
+  border-radius: 0.5vh;
+  position: relative;
+  left: 67vw;
+  top: -15vh;
+  width: 30vw;
+  height: 10vh;
+}
+
+#output-text {
+  padding: 0.4vw;
+  font-size: 2vh;
+}

@@ -1,24 +1,8 @@
 const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 const app = express();
 const mysql = require("mysql");
-
-const insertString = `INSERT INTO senator_list (
-    SEN_FIRST_NAME, 
-    SEN_LAST_NAME,
-    STATE,
-    POLITICAL_PARTY,
-    SEN_START_YEAR,
-    SEN_END_YEAR,
-    CURRENTLY_SERVING)
-    VALUES (
-        'William',
-        'Parker',
-        'AL',
-        'Democrat',
-        2020,
-        2021,
-        'N'
-        );`;
 
 const db = mysql.createPool({
   host: "localhost",
@@ -27,10 +11,18 @@ const db = mysql.createPool({
   database: "congressional_voting_schema",
 });
 
-app.get("/api/select", (req, res) => {
+app.use(cors());
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.get("/api/get/:usState", (req, res) => {
+  const usState = req.params.usState;
+  //console.log(usState);
   const sqlSelect = `SELECT * FROM senator_list WHERE
-  SEN_FIRST_NAME = `;
-  db.query();
+  STATE = ?`;
+  db.query(sqlSelect, [usState], (err, result) => {
+    res.send(result);
+  });
 });
 
 app.listen(3001, () => {
