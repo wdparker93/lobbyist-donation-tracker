@@ -18,7 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get("/api/get/:usState", (req, res) => {
   const usState = req.params.usState;
   //console.log(usState);
-  const sqlSelect = `SELECT * FROM senator_list WHERE
+  const sqlSelect = `SELECT * FROM current_senator_data WHERE
   STATE = ?`;
   db.query(sqlSelect, [usState], (err, result) => {
     res.send(result);

@@ -70,10 +70,18 @@
   right: 3vw;
 }
 
-.selector-wrapper {
+/* Selector + output styling section */
+
+#selection-output-wrapper {
+  display: flex;
+  flex-direction: row;
+}
+
+#selection-criteria-button-wrapper {
+  display: flex;
+  flex-direction: column;
   position: relative;
   left: 3vw;
-  top: 2vh;
 }
 
 #state-selector-label {
@@ -90,27 +98,43 @@
   top: 2vh;
 }
 
+#senator-selector-label {
+  color: white;
+  font-size: 2.5vh;
+  position: relative;
+  top: 2vh;
+}
+
+#party-selector-label {
+  color: white;
+  font-size: 2.5vh;
+  position: relative;
+  top: 2vh;
+}
+
 .search-button-wrapper {
   position: relative;
-  left: 3vw;
-  top: 6vh;
+  top: 5vh;
 }
 
 #search-button {
-  font-size: 1.5vh;
+  font-size: 1.75vh;
 }
 
 #output-window {
-  background-color: aliceblue;
+  background-color: rgb(255, 255, 255);
   border-radius: 0.5vh;
+  height: 15vh;
+  margin-left: auto;
   position: relative;
-  left: 67vw;
-  top: -15vh;
-  width: 30vw;
-  height: 10vh;
+  top: 6vh;
+  right: 3vw;
+  flex-basis: 25vw;
 }
 
 #output-text {
-  padding: 0.4vw;
+  position: relative;
+  top: -2vh;
+  padding: 0.5vw;
   font-size: 2vh;
 }
