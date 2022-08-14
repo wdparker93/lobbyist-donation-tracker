@@ -1,23 +1,34 @@
 import "./App.css";
 import Axios from "axios";
 import React, { useState, useEffect } from "react";
+import SenatorByState from "./secondary_components/components/SenatorByState.js";
+import SenatorByParty from "./secondary_components/components/SenatorByParty.js";
 
 function App() {
   const [usState, setUsState] = useState("--");
   const [senator, setSenator] = useState("--");
   const [party, setParty] = useState("--");
-  const [senator1Data, setSenator1Data] = useState([]);
-  const [senator2Data, setSenator2Data] = useState([]);
+  const [senatorData, setSenatorData] = useState([]);
+  const [outputComponent, setOutputComponent] = useState("");
 
+  /**
+   * Main driver for page updates.
+   * Output component is chosen after queries are chosen and run.
+   *
+   * @param {event} event Button click action that triggers updates
+   */
   const handleClick = (event) => {
+    //console.log("Handling Click");
     event.preventDefault();
     console.log(usState);
     console.log(senator);
     console.log(party);
     if (usState !== "--" && senator === "--" && party === "--") {
       getSenatorByState();
+    } else if (usState === "--" && senator === "--" && party !== "--") {
+      getSenatorByParty();
     }
-    //console.log("handleClick with: " + usState);
+    //chooseOutputComponent();
   };
 
   const handleUsStateChange = (event) => {
@@ -33,20 +44,41 @@ function App() {
   };
 
   const getSenatorByState = () => {
-    Axios.get("http://localhost:3001/api/get/" + usState).then((response) => {
-      setSenator1Data(response.data[0]);
-      setSenator2Data(response.data[1]);
-      //console.log(response.data);
-    });
+    Axios.get("http://localhost:3001/api/get/byUsState/" + usState).then(
+      (response) => {
+        setSenatorData(response.data);
+        chooseOutputComponent(response.data);
+      }
+    );
   };
 
-  /*
-  useEffect(() => {
-    Axios.get("http://localhost:3001/api/get").then((response) => {
-      console.log(response.data);
-    });
-  }, []);
-  */
+  const getSenatorByParty = () => {
+    //console.log("Getting Data By Party");
+    Axios.get("http://localhost:3001/api/get/byParty/" + party).then(
+      (response) => {
+        setSenatorData(response.data);
+        //console.log("Got The Data");
+        //console.log("response.data");
+        //console.log(response.data);
+        //console.log("senatorData");
+        //console.log({ senatorData });
+        chooseOutputComponent(response.data);
+      }
+    );
+  };
+
+  const chooseOutputComponent = (dataParam) => {
+    //console.log("Choosing Output Component With Party");
+    //console.log(dataParam);
+    //console.log("After dataParam logging");
+    if (usState !== "--" && senator === "--" && party === "--") {
+      setOutputComponent(<SenatorByState />);
+    } else if (usState === "--" && senator === "--" && party !== "--") {
+      setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
+    } else {
+      setOutputComponent(<SenatorByState />);
+    }
+  };
 
   return (
     <div className="App">
@@ -153,7 +185,7 @@ function App() {
               <option value="--">--</option>
               <option value="D">Democrat</option>
               <option value="R">Republican</option>
-              <option value="Other">Other</option>
+              <option value="I">Independent</option>
             </select>
           </div>
           <div className="selector-wrapper" id="issue-selector-wrapper">
@@ -178,17 +210,7 @@ function App() {
             </button>
           </div>
         </div>
-        <div id="output-window">
-          <p id="output-text">
-            Senators Currently Serving for {senator1Data.STATE}: <br></br>
-            <br></br>
-            {senator1Data.FIRST_NAME} {senator1Data.LAST_NAME} -{" "}
-            {senator1Data.PARTY}
-            <br></br>
-            {senator2Data.FIRST_NAME} {senator2Data.LAST_NAME} -{" "}
-            {senator2Data.PARTY}
-          </p>
-        </div>
+        <div id="output-component">{outputComponent}</div>
       </div>
     </div>
   );

@@ -15,12 +15,20 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get("/api/get/:usState", (req, res) => {
+app.get("/api/get/byUsState/:usState", (req, res) => {
   const usState = req.params.usState;
-  //console.log(usState);
   const sqlSelect = `SELECT * FROM current_senator_data WHERE
   STATE = ?`;
   db.query(sqlSelect, [usState], (err, result) => {
+    res.send(result);
+  });
+});
+
+app.get("/api/get/byParty/:party", (req, res) => {
+  const party = req.params.party;
+  const sqlSelect = `SELECT * FROM current_senator_data WHERE
+  PARTY = ?`;
+  db.query(sqlSelect, [party], (err, result) => {
     res.send(result);
   });
 });

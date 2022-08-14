@@ -121,20 +121,11 @@
   font-size: 1.75vh;
 }
 
-#output-window {
-  background-color: rgb(255, 255, 255);
-  border-radius: 0.5vh;
-  height: 15vh;
+#output-component {
   margin-left: auto;
+  flex-basis: 30vw;
   position: relative;
-  top: 6vh;
+  top: 4vh;
   right: 3vw;
-  flex-basis: 25vw;
-}
-
-#output-text {
-  position: relative;
-  top: -2vh;
-  padding: 0.5vw;
-  font-size: 2vh;
+  text-align: left;
 }
