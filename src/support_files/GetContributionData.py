@@ -32,9 +32,37 @@ import os
 def generateSQLInsert(pageOutputSummary):
     cwd = os.getcwd()
     outputFileName = cwd + "\src\support_files\\test.txt"
-    with open(outputFileName, "a") as f:
-        print("TESTING", file=f)
-        f.close()
+    for key in pageOutputSummary.keys():
+        DONATOR_TYPE = pageOutputSummary[key][0]
+        DONATOR_NAME = pageOutputSummary[key][1]
+        DONATOR_CITY = pageOutputSummary[key][2]
+        DONATOR_STATE = pageOutputSummary[key][3]
+        DONATOR_COUNTRY = pageOutputSummary[key][4]
+        RECIPIENT_NAME_RAW = ''
+        DONATION_AMOUNT = ''
+        DONATION_DATE = ''
+        for i in range(len(pageOutputSummary[key][5])):
+            contribution = pageOutputSummary[key][5][i]
+            RECIPIENT_NAME_RAW = contribution[0]
+            DONATION_AMOUNT = contribution[1]
+            DONATION_DATE = contribution[2]
+            sqlInsertString = """INSERT INTO table_name(DONATOR_TYPE, DONATOR_NAME, DONATOR_CITY, 
+                DONATOR_STATE, DONATOR_COUNTRY, RECIPIENT_NAME_RAW, DONATION_AMOUNT, DONATION_DATE, 
+                RECIPIENT_NAME, RECIPIENT_ID) VALUES """
+            sqlInsertString += "('" + DONATOR_TYPE + "', "
+            sqlInsertString += "'" + DONATOR_NAME + "', "
+            sqlInsertString += "'" + DONATOR_CITY + "', "
+            sqlInsertString += "'" + DONATOR_STATE + "', "
+            sqlInsertString += "'" + DONATOR_COUNTRY + "', "
+            sqlInsertString += "'" + RECIPIENT_NAME_RAW + "', "
+            sqlInsertString += "'" + DONATION_AMOUNT + "', "
+            sqlInsertString += "'" + DONATION_DATE + "', "
+            sqlInsertString += "'', "
+            sqlInsertString += "'')"
+            #print(sqlInsertString)
+        #with open(outputFileName, "a") as f:
+            #print("TESTING", file=f)
+            #f.close()
 
 #Try to connect to the API
 response_API = requests.get('https://lda.senate.gov/api/v1/contributions/?filing_uuid=&filing_type=&filing_year=&filing_period=&filing_dt_posted_after=1992-01-01&filing_dt_posted_before=2022-08-14&registrant_id=&registrant_name=&lobbyist_id=&lobbyist_name=&contribution_date_after=1992-01-01&contribution_date_before=2022-08-14&contribution_amount_min=&contribution_amount_max=&contribution_type=&contribution_contributor=&contribution_payee=&contribution_honoree=')
