@@ -1,9 +1,10 @@
 from asyncio.windows_events import NULL
 from pip._vendor import requests
 import json
+import os
 
-# Strategy:
-#  There are 99359 entries for contributions between 1992-01-01 and 2022-08-14
+#  Strategy:
+#  There are ((99359 pages) * (<= 25 entries per page)) entries for contributions between 1992-01-01 and 2022-08-14
 #  Get the results with json_object[results]
 #  Build a dictionary with all the results
 #  Once all 25 results have been processed from a page
@@ -12,18 +13,28 @@ import json
 #    3. The value in next will be null on the last page -> Use this as the check condition in the while loop
 #
 #  Each first generation of results ((great x ?) grandparent) will have child components listed below
-#    Parent: filer_type (lobbyist often)
-#      Child1: registrant - Only one
-#        a. name (contributor's company name)
+#    Parent (gen1): filer_type (lobbyist often)
+#      Child1: registrant - Only one per result
+#        a. name (donator's company name)
 #        b. city (Bham, etc.)
 #        c. state (AL, etc.)
 #        d. country (US, etc.)
-#      Child2: lobbyist - Only one
-#      Child3: contribution_items - One to many. -> This is the juicy one
+#      Child2: lobbyist - Only one per result
+#        a. Not being used here.
+#      Child3: contribution_items - One to many per result -> This is the juicy one
 #        a. honoree_name (senator, etc.)
 #        b. payee_name (shell company for politician, campaign fund, etc.)
 #        c. amount ($$)
 #        d. date (when payment received)
+
+#Takes the data from a summary of page output and generates a SQL query
+#so the data can be inserted into a database
+def generateSQLInsert(pageOutputSummary):
+    cwd = os.getcwd()
+    outputFileName = cwd + "\src\support_files\\test.txt"
+    with open(outputFileName, "a") as f:
+        print("TESTING", file=f)
+        f.close()
 
 #Try to connect to the API
 response_API = requests.get('https://lda.senate.gov/api/v1/contributions/?filing_uuid=&filing_type=&filing_year=&filing_period=&filing_dt_posted_after=1992-01-01&filing_dt_posted_before=2022-08-14&registrant_id=&registrant_name=&lobbyist_id=&lobbyist_name=&contribution_date_after=1992-01-01&contribution_date_before=2022-08-14&contribution_amount_min=&contribution_amount_max=&contribution_type=&contribution_contributor=&contribution_payee=&contribution_honoree=')
@@ -36,17 +47,14 @@ else:
     print('Connection Failed on Request for Page 1')
     exit()
 
-
-#Handle the results and build a dictionary
-outputSummary = {}
-
 nextPageLink = 'do-While Starter'
 for i in range(2):    #Test with small number of items
 #while nextPageLink != NULL:
-    #Get the data
+    #Get the data and build the dictionary
     data = response_API.text
     json_object = json.loads(data)
     json_object_results = json_object["results"]
+    pageOutputSummary = {}
 
     #Do work and get the data into the dictionary
     for j in range(len(json_object_results)):
@@ -75,9 +83,10 @@ for i in range(2):    #Test with small number of items
             contrItemSummary[k] = itemValueArray
 
         #Add data to the dictionary
-        outputSummary[key] = [filerType, donatorName, donatorCity, donatorState, donatorCountry, contrItemSummary]
+        pageOutputSummary[key] = [filerType, donatorName, donatorCity, donatorState, donatorCountry, contrItemSummary]
         print('PRINTING DICTIONARY')
-        print(outputSummary)
+        print(pageOutputSummary)
+    generateSQLInsert(pageOutputSummary)
 
     #Set up to get the next page...
     nextPageLink = json_object["next"]
