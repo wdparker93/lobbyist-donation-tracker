@@ -2,6 +2,7 @@ from asyncio.windows_events import NULL
 from pip._vendor import requests
 import json
 import os
+import mysql.connector
 
 #  Strategy:
 #  There are ((99359 pages) * (<= 25 entries per page)) entries for contributions between 1992-01-01 and 2022-08-14
@@ -27,9 +28,25 @@ import os
 #        c. amount ($$)
 #        d. date (when payment received)
 
+#Executes array of insertion queries to the database for each page of results
+def insertToDatabase(insertQueryArr):
+    dbConnection = mysql.connector.connect(user="root", password="password", host="localhost", database="congressional_voting_schema")
+    if dbConnection.is_connected():
+        print('Connection to MySQL DB Successful')
+    else:
+        print('ERROR: Did not connect to MySQL DB')
+        exit()
+    crsr = dbConnection.cursor()
+    for i in range(len(insertQueryArr)):
+        print(insertQueryArr[i])
+        crsr.execute(insertQueryArr[i])
+        dbConnection.commit()
+    dbConnection.close()
+
 #Takes the data from a summary of page output and generates a SQL query
 #so the data can be inserted into a database
 def generateSQLInsert(pageOutputSummary):
+    insertQueryArr = []
     cwd = os.getcwd()
     outputFileName = cwd + "\src\support_files\\test.txt"
     for key in pageOutputSummary.keys():
@@ -46,7 +63,7 @@ def generateSQLInsert(pageOutputSummary):
             RECIPIENT_NAME_RAW = contribution[0]
             DONATION_AMOUNT = contribution[1]
             DONATION_DATE = contribution[2]
-            sqlInsertString = """INSERT INTO table_name(DONATOR_TYPE, DONATOR_NAME, DONATOR_CITY, 
+            sqlInsertString = """INSERT INTO contributions_data(DONATOR_TYPE, DONATOR_NAME, DONATOR_CITY, 
                 DONATOR_STATE, DONATOR_COUNTRY, RECIPIENT_NAME_RAW, DONATION_AMOUNT, DONATION_DATE, 
                 RECIPIENT_NAME, RECIPIENT_ID) VALUES """
             sqlInsertString += "('" + DONATOR_TYPE + "', "
@@ -58,11 +75,9 @@ def generateSQLInsert(pageOutputSummary):
             sqlInsertString += "'" + DONATION_AMOUNT + "', "
             sqlInsertString += "'" + DONATION_DATE + "', "
             sqlInsertString += "'', "
-            sqlInsertString += "'')"
-            #print(sqlInsertString)
-        #with open(outputFileName, "a") as f:
-            #print("TESTING", file=f)
-            #f.close()
+            sqlInsertString += "'');"
+            insertQueryArr.append(sqlInsertString)
+    insertToDatabase(insertQueryArr)
 
 #Try to connect to the API
 response_API = requests.get('https://lda.senate.gov/api/v1/contributions/?filing_uuid=&filing_type=&filing_year=&filing_period=&filing_dt_posted_after=1992-01-01&filing_dt_posted_before=2022-08-14&registrant_id=&registrant_name=&lobbyist_id=&lobbyist_name=&contribution_date_after=1992-01-01&contribution_date_before=2022-08-14&contribution_amount_min=&contribution_amount_max=&contribution_type=&contribution_contributor=&contribution_payee=&contribution_honoree=')
@@ -76,8 +91,8 @@ else:
     exit()
 
 nextPageLink = 'do-While Starter'
-for i in range(2):    #Test with small number of items
-#while nextPageLink != NULL:
+#for i in range(1):    #Test with small number of items
+while nextPageLink != NULL:
     #Get the data and build the dictionary
     data = response_API.text
     json_object = json.loads(data)
@@ -112,8 +127,8 @@ for i in range(2):    #Test with small number of items
 
         #Add data to the dictionary
         pageOutputSummary[key] = [filerType, donatorName, donatorCity, donatorState, donatorCountry, contrItemSummary]
-        print('PRINTING DICTIONARY')
-        print(pageOutputSummary)
+        #print('PRINTING DICTIONARY')
+        #print(pageOutputSummary)
     generateSQLInsert(pageOutputSummary)
 
     #Set up to get the next page...
