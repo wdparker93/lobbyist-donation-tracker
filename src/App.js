@@ -18,7 +18,6 @@ function App() {
    * @param {event} event Button click action that triggers updates
    */
   const handleClick = (event) => {
-    //console.log("Handling Click");
     event.preventDefault();
     console.log(usState);
     console.log(senator);
@@ -28,7 +27,6 @@ function App() {
     } else if (usState === "--" && senator === "--" && party !== "--") {
       getSenatorByParty();
     }
-    //chooseOutputComponent();
   };
 
   const handleUsStateChange = (event) => {
@@ -53,24 +51,15 @@ function App() {
   };
 
   const getSenatorByParty = () => {
-    //console.log("Getting Data By Party");
     Axios.get("http://localhost:3001/api/get/byParty/" + party).then(
       (response) => {
         setSenatorData(response.data);
-        //console.log("Got The Data");
-        //console.log("response.data");
-        //console.log(response.data);
-        //console.log("senatorData");
-        //console.log({ senatorData });
         chooseOutputComponent(response.data);
       }
     );
   };
 
   const chooseOutputComponent = (dataParam) => {
-    //console.log("Choosing Output Component With Party");
-    //console.log(dataParam);
-    //console.log("After dataParam logging");
     if (usState !== "--" && senator === "--" && party === "--") {
       setOutputComponent(<SenatorByState />);
     } else if (usState === "--" && senator === "--" && party !== "--") {
@@ -94,8 +83,12 @@ function App() {
           <h2 id="data-source-explanation">
             The voting data presented by this page are publicly available and
             can be found at{" "}
-            <a id="congress-gov-link" href="https://www.congress.gov/">
+            <a class="data-link" href="https://www.congress.gov/">
               congress.gov
+            </a>
+            . Monetary disclosure reports can be found{" "}
+            <a class="data-link" href="https://lda.senate.gov/api/">
+              here
             </a>
             .
           </h2>

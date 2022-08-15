@@ -1,5 +1,5 @@
-1. Generate list of names and states when rendering a drop-down menu
-2. Learn how to pass data to child components
+1. Generate list of names and states from a DB when rendering a drop-down menu
+DONE 2. Learn how to pass data to child components
 3. Get monetary contribution data into the DB
 4. Get congress member voting data into the DB
 5. Find a way to compare donations/bribes with the way the congress people voted.

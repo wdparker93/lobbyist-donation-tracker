@@ -4,9 +4,11 @@
   color: black;
   overflow-y: scroll;
   background-color: rgba(255, 255, 255, 0.7);
-  height: 60vh;
-  width: 30vw;
+  height: 52vh;
+  width: 28vw;
   border-radius: 0.5vh;
+  position: relative;
+  top: 2vh;
 }
 
 #senator-names-list {
