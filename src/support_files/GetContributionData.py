@@ -14,7 +14,9 @@ import mysql.connector
 #    3. The value in next will be null on the last page -> Use this as the check condition in the while loop
 #
 #  Each first generation of results ((great x ?) grandparent) will have child components listed below
-#    Parent (gen1): filer_type (lobbyist often)
+#    Parent (gen1): 
+#      a. filer_type (lobbyist often)
+#      b. no_contributions (true if no contributions were made)
 #      Child1: registrant - Only one per result
 #        a. name (donator's company name)
 #        b. city (Bham, etc.)
@@ -43,12 +45,20 @@ def insertToDatabase(insertQueryArr):
         dbConnection.commit()
     dbConnection.close()
 
+#Check for NoneTypes and get rid of ' characters before inserting to DB
+def sanitizeData(paramArray):
+    for i in range(len(paramArray)):
+        param = paramArray[i]
+        if param is None:
+            param = ""
+        param = param.replace("'","")
+        paramArray[i] = param
+    return paramArray
+
 #Takes the data from a summary of page output and generates a SQL query
 #so the data can be inserted into a database
 def generateSQLInsert(pageOutputSummary):
     insertQueryArr = []
-    cwd = os.getcwd()
-    outputFileName = cwd + "\src\support_files\\test.txt"
     for key in pageOutputSummary.keys():
         DONATOR_TYPE = pageOutputSummary[key][0]
         DONATOR_NAME = pageOutputSummary[key][1]
@@ -58,37 +68,64 @@ def generateSQLInsert(pageOutputSummary):
         RECIPIENT_NAME_RAW = ''
         DONATION_AMOUNT = ''
         DONATION_DATE = ''
+        #print(pageOutputSummary[key][5])
+        #print(len(pageOutputSummary[key][5]))
         for i in range(len(pageOutputSummary[key][5])):
+            paramArray = []
             contribution = pageOutputSummary[key][5][i]
-            RECIPIENT_NAME_RAW = contribution[0]
-            DONATION_AMOUNT = contribution[1]
-            DONATION_DATE = contribution[2]
-            sqlInsertString = """INSERT INTO contributions_data(DONATOR_TYPE, DONATOR_NAME, DONATOR_CITY, 
-                DONATOR_STATE, DONATOR_COUNTRY, RECIPIENT_NAME_RAW, DONATION_AMOUNT, DONATION_DATE, 
-                RECIPIENT_NAME, RECIPIENT_ID) VALUES """
-            sqlInsertString += "('" + DONATOR_TYPE + "', "
-            sqlInsertString += "'" + DONATOR_NAME + "', "
-            sqlInsertString += "'" + DONATOR_CITY + "', "
-            sqlInsertString += "'" + DONATOR_STATE + "', "
-            sqlInsertString += "'" + DONATOR_COUNTRY + "', "
-            sqlInsertString += "'" + RECIPIENT_NAME_RAW + "', "
-            sqlInsertString += "'" + DONATION_AMOUNT + "', "
-            sqlInsertString += "'" + DONATION_DATE + "', "
-            sqlInsertString += "'', "
-            sqlInsertString += "'');"
-            insertQueryArr.append(sqlInsertString)
-    insertToDatabase(insertQueryArr)
+            #print(contribution)
+            RECIPIENT_SHELL_NAME_RAW = contribution[0]
+            RECIPIENT_NAME_RAW = contribution[1]
+            DONATION_AMOUNT = contribution[2]
+            DONATION_DATE = contribution[3]
+            paramArray.append(DONATOR_TYPE)
+            paramArray.append(DONATOR_NAME)
+            paramArray.append(DONATOR_CITY)
+            paramArray.append(DONATOR_STATE)
+            paramArray.append(DONATOR_COUNTRY)
+            paramArray.append(RECIPIENT_SHELL_NAME_RAW)
+            paramArray.append(RECIPIENT_NAME_RAW)
+            #print(RECIPIENT_NAME_RAW)
+            paramArray.append(DONATION_AMOUNT)
+            paramArray.append(DONATION_DATE)
+            paramArray = sanitizeData(paramArray)
+            if RECIPIENT_NAME_RAW != "N/A" and RECIPIENT_SHELL_NAME_RAW != "N/A":
+                sqlInsertString = """INSERT INTO contributions_data(DONATOR_TYPE, DONATOR_NAME, DONATOR_CITY, 
+                    DONATOR_STATE, DONATOR_COUNTRY, RECIPIENT_SHELL_NAME_RAW, RECIPIENT_NAME_RAW, DONATION_AMOUNT, DONATION_DATE, 
+                    RECIPIENT_NAME, RECIPIENT_ID, RECIPIENT_SHELL_NAME) VALUES """
+                sqlInsertString += "('" + paramArray[0] + "', "
+                sqlInsertString += "'" + paramArray[1] + "', "
+                sqlInsertString += "'" + paramArray[2] + "', "
+                sqlInsertString += "'" + paramArray[3] + "', "
+                sqlInsertString += "'" + paramArray[4] + "', "
+                sqlInsertString += "'" + paramArray[5] + "', "
+                sqlInsertString += "'" + paramArray[6] + "', "
+                sqlInsertString += "'" + paramArray[7] + "', "
+                sqlInsertString += "'" + paramArray[8] + "', "
+                sqlInsertString += "'', "
+                sqlInsertString += "'', "
+                sqlInsertString += "'');"
+                #print(sqlInsertString)
+                insertQueryArr.append(sqlInsertString)
+    if len(insertQueryArr) > 0:
+        insertToDatabase(insertQueryArr)
 
-#Try to connect to the API
-response_API = requests.get('https://lda.senate.gov/api/v1/contributions/?filing_uuid=&filing_type=&filing_year=&filing_period=&filing_dt_posted_after=1992-01-01&filing_dt_posted_before=2022-08-14&registrant_id=&registrant_name=&lobbyist_id=&lobbyist_name=&contribution_date_after=1992-01-01&contribution_date_before=2022-08-14&contribution_amount_min=&contribution_amount_max=&contribution_type=&contribution_contributor=&contribution_payee=&contribution_honoree=')
+################################################################################################
+#Program starting point
+################################################################################################
+#Connect to the API
+response_API = requests.get('https://lda.senate.gov/api/v1/contributions/')
 
 #Check connection status
+pageCounter = 1
 apiStatusCode = response_API.status_code
 if apiStatusCode == 200:
-    print('Connection Successful on Request for Page 1')
+    print('Connection Successful on Request for Page ' + str(pageCounter))
 else:
-    print('Connection Failed on Request for Page 1')
+    print('Connection Failed on Request for Page ' + str(pageCounter))
     exit()
+
+progressTrackerFile = os.getcwd() + '\src\support_files\progress_tracker.txt'
 
 nextPageLink = 'do-While Starter'
 #for i in range(1):    #Test with small number of items
@@ -97,39 +134,46 @@ while nextPageLink != NULL:
     data = response_API.text
     json_object = json.loads(data)
     json_object_results = json_object["results"]
+    #The final dictionary
     pageOutputSummary = {}
 
     #Do work and get the data into the dictionary
     for j in range(len(json_object_results)):
         primaryResultEntry = json_object_results[j]
-        key = 'key' + str(j)    #Goes to final output
-        filerType = primaryResultEntry["filer_type"]   #Goes to final output
-        json_object_registrant = primaryResultEntry["registrant"]
-        donatorName = json_object_registrant["name"]    #Goes to final output
-        donatorCity = json_object_registrant["city"]    #Goes to final output
-        donatorState = json_object_registrant["state"]  #Goes to final output
-        donatorCountry = json_object_registrant["country"]  #Goes to final output
-        contributionItems = primaryResultEntry["contribution_items"]
-        contrItemSummary = [[0]*3]*len(contributionItems) #Goes to final output
-        #Summarize each item
-        for k in range(len(contributionItems)):
-            itemValueArray = []
-            #Get the values
-            donationRecipient = (contributionItems[k])["honoree_name"]
-            donationAmount = (contributionItems[k])["amount"]
-            donationDate = (contributionItems[k])["date"]
-            #Put them in the array
-            itemValueArray.append(donationRecipient)
-            itemValueArray.append(donationAmount)
-            itemValueArray.append(donationDate)
-            #Put them in the parent array
-            contrItemSummary[k] = itemValueArray
-
-        #Add data to the dictionary
-        pageOutputSummary[key] = [filerType, donatorName, donatorCity, donatorState, donatorCountry, contrItemSummary]
-        #print('PRINTING DICTIONARY')
-        #print(pageOutputSummary)
+        noContributionsMade = primaryResultEntry["no_contributions"]
+        #print(noContributionsMade)
+        if noContributionsMade == False:
+            key = 'key' + str(j)    #Goes to final output
+            filerType = primaryResultEntry["filer_type"]   #Goes to final output
+            json_object_registrant = primaryResultEntry["registrant"]
+            donatorName = json_object_registrant["name"]    #Goes to final output
+            donatorCity = json_object_registrant["city"]    #Goes to final output
+            donatorState = json_object_registrant["state"]  #Goes to final output
+            donatorCountry = json_object_registrant["country"]  #Goes to final output
+            contributionItems = primaryResultEntry["contribution_items"]
+            contrItemSummary = [[0]*4]*len(contributionItems) #Goes to final output
+            #Summarize each item
+            for k in range(len(contributionItems)):
+                itemValueArray = []
+                #Get the values
+                donationRecipientShell = (contributionItems[k])["payee_name"]
+                donationRecipient = (contributionItems[k])["honoree_name"]
+                #print(donationRecipient)
+                donationAmount = (contributionItems[k])["amount"]
+                donationDate = (contributionItems[k])["date"]
+                #Put them in the array
+                itemValueArray.append(donationRecipientShell)
+                itemValueArray.append(donationRecipient)
+                itemValueArray.append(donationAmount)
+                itemValueArray.append(donationDate)
+                #Put them in the parent array
+                contrItemSummary[k] = itemValueArray
+            #Add data to the dictionary
+            pageOutputSummary[key] = [filerType, donatorName, donatorCity, donatorState, donatorCountry, contrItemSummary]
+    #print('PRINTING DICTIONARY')
+    #print(pageOutputSummary)
     generateSQLInsert(pageOutputSummary)
+    pageCounter += 1
 
     #Set up to get the next page...
     nextPageLink = json_object["next"]
@@ -138,7 +182,9 @@ while nextPageLink != NULL:
         response_API = requests.get(nextPageLink)
         apiStatusCode = response_API.status_code
         if apiStatusCode == 200:
-            print('Connection Successful on Request for Page ' + str(i + 2))
+            print('Connection Successful on Request for Page ' + str(pageCounter))
+            with(open(progressTrackerFile, "w")) as f:
+                print("Last next link: " + str(nextPageLink), file = f)
         else:
-            print('Connection Failed on Request for Page ' + str(i + 2))
+            print('Connection Failed on Request for Page ' + str(pageCounter))
             exit()
