@@ -61,11 +61,11 @@ function App() {
 
   const chooseOutputComponent = (dataParam) => {
     if (usState !== "--" && senator === "--" && party === "--") {
-      setOutputComponent(<SenatorByState />);
+      setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
     } else if (usState === "--" && senator === "--" && party !== "--") {
       setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
     } else {
-      setOutputComponent(<SenatorByState />);
+      setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
     }
   };
 

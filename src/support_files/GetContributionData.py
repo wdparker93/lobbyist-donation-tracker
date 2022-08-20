@@ -5,7 +5,7 @@ import os
 import mysql.connector
 
 #  Strategy:
-#  There are ((99359 pages) * (<= 25 entries per page)) entries for contributions between 1992-01-01 and 2022-08-14
+#  There are ((20565 pages) * (<= 25 entries per page)) entries for contributions between 2008-01-01 and 2022-08-14
 #  Get the results with json_object[results]
 #  Build a dictionary with all the results
 #  Once all 25 results have been processed from a page
@@ -52,6 +52,7 @@ def sanitizeData(paramArray):
         if param is None:
             param = ""
         param = param.replace("'","")
+        param = param.replace("\\","-")
         paramArray[i] = param
     return paramArray
 
@@ -114,10 +115,24 @@ def generateSQLInsert(pageOutputSummary):
 #Program starting point
 ################################################################################################
 #Connect to the API
-response_API = requests.get('https://lda.senate.gov/api/v1/contributions/')
+
+initialConnectionPage1 = "https://lda.senate.gov/api/v1/contributions/"
+startingPageNum1 = 1
+initialConnectionPage2 = "https://lda.senate.gov/api/v1/contributions/?page=2299"
+startingPageNum2 = 2299
+initialConnectionPage3 = "https://lda.senate.gov/api/v1/contributions/?page=4859"
+startingPageNum3 = 4858
+initialConnectionPage4 = "https://lda.senate.gov/api/v1/contributions/?page=8361"
+startingPageNum4 = 8361
+initialConnectionPage5 = "https://lda.senate.gov/api/v1/contributions/?page=9916"
+startingPageNum5 = 9916
+initialConnectionPage6 = "https://lda.senate.gov/api/v1/contributions/?page=16498"
+startingPageNum6 = 16497
+
+response_API = requests.get(initialConnectionPage6)
 
 #Check connection status
-pageCounter = 1
+pageCounter = startingPageNum6
 apiStatusCode = response_API.status_code
 if apiStatusCode == 200:
     print('Connection Successful on Request for Page ' + str(pageCounter))
@@ -188,3 +203,6 @@ while nextPageLink != NULL:
         else:
             print('Connection Failed on Request for Page ' + str(pageCounter))
             exit()
+    else:
+        print("NULL nextPageLink found on page " + str(pageCounter))
+exit()

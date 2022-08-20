@@ -60,8 +60,8 @@ function SenatorByParty(senatorPartyData) {
     <>
       <div id="output-wrapper">
         {partyName} Senators:
-        <div id="senator-names-list-wrapper">
-          <ul id="senator-names-list">{innerHTML}</ul>
+        <div id="senator-names-list-wrapper-party">
+          <ul id="senator-names-list-party">{innerHTML}</ul>
         </div>
       </div>
     </>
