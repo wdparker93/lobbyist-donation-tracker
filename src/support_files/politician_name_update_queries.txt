@@ -1,0 +1,10 @@
+Congress Member Name Update Queries
+-------------------------------------------------------------------------------------------------
+SELECT DISTINCT RECIPIENT_NAME_RAW FROM contributions_data
+WHERE RECIPIENT_NAME_RAW LIKE ('%Nancy%Pelosi')
+AND RECIPIENT_NAME_RAW NOT IN ('Congressman Bill Pascrell, Speaker of the House Nancy Pelosi');
+
+
+UPDATE contributions_data
+SET RECIPIENT_NAME = 'Mitch McConnell'
+WHERE RECIPIENT_NAME_RAW LIKE ('%Mitch%McConnell');
