@@ -1,0 +1,28 @@
+#output-wrapper-loading-senators {
+  padding: 1vw;
+  background-image: url("https://bestanimations.com/media/usa/1149295287usa-american-flag-waving-animated-gif-7.gif");
+  background-repeat: repeat;
+  background-size: cover;
+  height: 28vh;
+  width: 32vw;
+  border-radius: 0.5vh;
+  position: relative;
+  top: 2vh;
+  text-align: center;
+  font-weight: bolder;
+  align-items: center;
+}
+
+#loading-senator-text-wrapper {
+  font-size: 5vh;
+  color: black;
+  position: relative;
+  top: 3vh;
+  width: auto;
+  height: 12vh;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+#loading-senator-text {
+  padding: 3vh 0;
+}

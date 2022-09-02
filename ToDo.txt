@@ -1,7 +1,11 @@
 1. Generate list of names and states from a DB when rendering a drop-down menu
 DONE 2. Learn how to pass data to child components
-3. Get monetary contribution data into the DB
+DONE 3. Get monetary contribution data into the DB
 DONE 4. Get congress member voting data into the DB
 5. Find a way to compare donations/bribes with the way the congress people voted.
   a. Charts, graphs, etc.
-6. Get app hosted on Heroku (cloud)
+6. Get app hosted on Heroku (cloud).
+DONE 7. Display loading animation while waiting on SQL results.
+8. Finish query building when using multiple selection criteria.
+9. Review and sanitize contribution data before publication.
+10. Improve DB security before publication.

@@ -5,6 +5,7 @@ import SenatorByState from "./secondary_components/components/SenatorByState.js"
 import SenatorByParty from "./secondary_components/components/SenatorByParty.js";
 import SenatorByStateParty from "./secondary_components/components/SenatorByStateParty.js";
 import NoSenatorsExist from "./secondary_components/components/NoSenatorsExist.js";
+import LoadingSenators from "./secondary_components/components/LoadingSenators.js";
 
 function App() {
   const [usState, setUsState] = useState("--");
@@ -12,6 +13,7 @@ function App() {
   const [party, setParty] = useState("--");
   const [senatorData, setSenatorData] = useState([]);
   const [outputComponent, setOutputComponent] = useState("");
+  let loading = false;
 
   /**
    * Main driver for page updates.
@@ -46,8 +48,11 @@ function App() {
   };
 
   const getSenatorByState = () => {
+    loading = true;
+    chooseOutputComponent(null);
     Axios.get("http://localhost:3001/api/get/byUsState/" + usState).then(
       (response) => {
+        loading = false;
         setSenatorData(response.data);
         chooseOutputComponent(response.data);
       }
@@ -55,8 +60,11 @@ function App() {
   };
 
   const getSenatorByParty = () => {
+    loading = true;
+    chooseOutputComponent(null);
     Axios.get("http://localhost:3001/api/get/byParty/" + party).then(
       (response) => {
+        loading = false;
         setSenatorData(response.data);
         chooseOutputComponent(response.data);
       }
@@ -64,37 +72,38 @@ function App() {
   };
 
   const getSenatorByStateParty = () => {
-    const params = {
-      state: usState,
-      party: party,
-    };
+    loading = true;
+    chooseOutputComponent(null);
     Axios.get(
       "http://localhost:3001/api/get/byStateParty/" + usState + "/" + party
     ).then((response) => {
+      loading = false;
       setSenatorData(response.data);
       chooseOutputComponent(response.data);
     });
   };
 
   const chooseOutputComponent = (dataParam) => {
-    console.log(dataParam.length);
-    if (dataParam.length > 0) {
-      console.log("I'm where I shouldn't be");
-      if (usState !== "--" && senator === "--" && party === "--") {
-        setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
-      } else if (usState === "--" && senator === "--" && party !== "--") {
-        setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
-      } else {
-        setOutputComponent(
-          <SenatorByStateParty senatorStatePartyData={dataParam} />
-        );
-      }
+    if (loading) {
+      setOutputComponent(<LoadingSenators />);
     } else {
-      let paramList = [];
-      paramList.push(usState);
-      paramList.push(party);
-      paramList.push(senator);
-      setOutputComponent(<NoSenatorsExist emptyDataSet={paramList} />);
+      if (dataParam.length > 0) {
+        if (usState !== "--" && senator === "--" && party === "--") {
+          setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
+        } else if (usState === "--" && senator === "--" && party !== "--") {
+          setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
+        } else {
+          setOutputComponent(
+            <SenatorByStateParty senatorStatePartyData={dataParam} />
+          );
+        }
+      } else {
+        let paramList = [];
+        paramList.push(usState);
+        paramList.push(party);
+        paramList.push(senator);
+        setOutputComponent(<NoSenatorsExist emptyDataSet={paramList} />);
+      }
     }
   };
 
