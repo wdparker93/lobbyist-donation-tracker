@@ -1,4 +1,4 @@
-import "../css/SenatorByParty.css";
+import "../css/SenatorById.css";
 
 let columnNameArr = [
   {
@@ -12,30 +12,20 @@ let columnNameArr = [
 
 let senatorDataArr = [];
 
-function SenatorByParty(senatorPartyData) {
-  let partyAbbrev = Object.values(senatorPartyData.senatorPartyData[0])[2];
-  let partyName = "";
-  if (partyAbbrev === "R") {
-    partyName = "Republican";
-  } else if (partyAbbrev === "D") {
-    partyName = "Democratic";
-  } else if (partyAbbrev === "I") {
-    partyName = "Independent";
-  } else {
-    partyName = "Invalid";
-  }
+function SenatorById(senatorIdData) {
+  let firstNamePrint = Object.values(senatorIdData.senatorIdData[0])[0];
+  let lastNamePrint = Object.values(senatorIdData.senatorIdData[0])[1];
+  let fullNamePrint = firstNamePrint + " " + lastNamePrint;
 
   const populateSenatorData = () => {
-    for (let i = 0; i < senatorPartyData.senatorPartyData.length; i++) {
+    for (let i = 0; i < senatorIdData.senatorIdData.length; i++) {
       let senObj = new Object();
       let id = i + 1;
-      let firstName = Object.values(senatorPartyData.senatorPartyData[i])[0];
-      let lastName = Object.values(senatorPartyData.senatorPartyData[i])[1];
-      let party = Object.values(senatorPartyData.senatorPartyData[i])[2];
-      let state = Object.values(senatorPartyData.senatorPartyData[i])[3];
-      let dollarsReceived = Object.values(
-        senatorPartyData.senatorPartyData[i]
-      )[4];
+      let firstName = Object.values(senatorIdData.senatorIdData[i])[0];
+      let lastName = Object.values(senatorIdData.senatorIdData[i])[1];
+      let party = Object.values(senatorIdData.senatorIdData[i])[2];
+      let state = Object.values(senatorIdData.senatorIdData[i])[3];
+      let dollarsReceived = Object.values(senatorIdData.senatorIdData[i])[4];
       senObj.id = id;
       senObj.firstName = firstName;
       senObj.lastName = lastName;
@@ -80,15 +70,15 @@ function SenatorByParty(senatorPartyData) {
 
   return (
     <>
-      <div id="output-wrapper-party">
-        {partyName} Senators:
-        <div id="senator-names-list-wrapper-party">
+      <div id="output-wrapper-id">
+        Senator {fullNamePrint}:
+        <div id="senator-names-list-wrapper-id">
           <div id="data-column-names">{generateColumnNames()}</div>
-          <div id="senator-names-list-party">{generateSenatorData()}</div>
+          <div id="senator-names-list-id">{generateSenatorData()}</div>
         </div>
       </div>
     </>
   );
 }
 
-export default SenatorByParty;
+export default SenatorById;

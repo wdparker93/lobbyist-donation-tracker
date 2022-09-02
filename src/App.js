@@ -3,6 +3,7 @@ import Axios from "axios";
 import React, { useState, useEffect } from "react";
 import SenatorByState from "./secondary_components/components/SenatorByState.js";
 import SenatorByParty from "./secondary_components/components/SenatorByParty.js";
+import SenatorById from "./secondary_components/components/SenatorById.js";
 import SenatorByStateParty from "./secondary_components/components/SenatorByStateParty.js";
 import NoSenatorsExist from "./secondary_components/components/NoSenatorsExist.js";
 import LoadingSenators from "./secondary_components/components/LoadingSenators.js";
@@ -14,6 +15,41 @@ function App() {
   const [senatorData, setSenatorData] = useState([]);
   const [outputComponent, setOutputComponent] = useState("");
   let loading = false;
+
+  useEffect(() => {
+    populateSenatorNameArr();
+  });
+
+  const populateSenatorNameArr = () => {
+    Axios.get("http://localhost:3001/api/get/allSenatorNames/").then(
+      (response) => {
+        const senatorFullNameArr = [];
+        const senatorIdArr = [];
+        let senatorNameData = response.data;
+        for (let i = 0; i < senatorNameData.length; i++) {
+          let senatorName = senatorNameData[i];
+          let fullName =
+            senatorName.SIMPLE_FIRST_NAME + " " + senatorName.SIMPLE_LAST_NAME;
+          let id = senatorName.SENATOR_KEY;
+          senatorFullNameArr.push(fullName);
+          senatorIdArr.push(id);
+        }
+        generateSenatorSelectorOptions(senatorFullNameArr, senatorIdArr);
+      }
+    );
+  };
+
+  const generateSenatorSelectorOptions = (senatorFullNameArr, senatorIdArr) => {
+    let selector = document.getElementById("senator-selector");
+    for (let i = 0; i < senatorFullNameArr.length; i++) {
+      let optionName = senatorFullNameArr[i];
+      let optionId = senatorIdArr[i];
+      let element = document.createElement("option");
+      element.textContent = optionName;
+      element.value = optionId;
+      selector.appendChild(element);
+    }
+  };
 
   /**
    * Main driver for page updates.
@@ -32,6 +68,8 @@ function App() {
       getSenatorByParty();
     } else if (usState !== "--" && senator === "--" && party !== "--") {
       getSenatorByStateParty();
+    } else if (usState === "--" && senator !== "--" && party === "--") {
+      getSenatorBySenatorId();
     }
   };
 
@@ -71,6 +109,19 @@ function App() {
     );
   };
 
+  const getSenatorBySenatorId = () => {
+    loading = true;
+    chooseOutputComponent(null);
+    let senatorParam = senator.split(" ").join("_");
+    Axios.get("http://localhost:3001/api/get/bySenatorId/" + senatorParam).then(
+      (response) => {
+        loading = false;
+        setSenatorData(response.data);
+        chooseOutputComponent(response.data);
+      }
+    );
+  };
+
   const getSenatorByStateParty = () => {
     loading = true;
     chooseOutputComponent(null);
@@ -92,7 +143,9 @@ function App() {
           setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
         } else if (usState === "--" && senator === "--" && party !== "--") {
           setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
-        } else {
+        } else if (usState === "--" && senator !== "--" && party === "--") {
+          setOutputComponent(<SenatorById senatorIdData={dataParam} />);
+        } else if (usState === "--" && senator !== "--" && party === "--") {
           setOutputComponent(
             <SenatorByStateParty senatorStatePartyData={dataParam} />
           );
@@ -201,7 +254,6 @@ function App() {
             </p>
             <select id="senator-selector" onChange={handleSenatorChange}>
               <option value="--">--</option>
-              <option value="William Parker">William Parker</option>
             </select>
           </div>
           <div className="selector-wrapper" id="party-selector-wrapper">

@@ -1,8 +1,8 @@
-1. Generate list of names and states from a DB when rendering a drop-down menu
+DONE 1. Generate list of names and states from a DB when rendering a drop-down menu
 DONE 2. Learn how to pass data to child components
 DONE 3. Get monetary contribution data into the DB
 DONE 4. Get congress member voting data into the DB
-5. Find a way to compare donations/bribes with the way the congress people voted.
+???? 5. Find a way to compare donations/bribes with the way the congress people voted.
   a. Charts, graphs, etc.
 6. Get app hosted on Heroku (cloud).
 DONE 7. Display loading animation while waiting on SQL results.
