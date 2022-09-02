@@ -1,18 +1,25 @@
-#output-wrapper {
+#output-wrapper-party {
   padding: 1vw;
-  font-size: 5vh;
+  font-size: 4vh;
   color: black;
   overflow-y: scroll;
   background-color: rgba(255, 255, 255, 0.7);
-  height: 52vh;
-  width: 28vw;
+  height: 50vh;
+  width: 32vw;
   border-radius: 0.5vh;
   position: relative;
   top: 2vh;
 }
 
-#senator-names-list-party {
+#senator-names-list-wrapper-party {
+  position: relative;
+  top: 3vh;
+}
+
+.data-row {
   font-size: 2.5vh;
+  display: grid;
+  border: 1px solid black;
+  grid-template-columns: 2.5vw 7vw 7vw 4.5vw 12vw;
   color: black;
-  white-space: pre-line;
 }

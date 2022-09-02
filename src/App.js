@@ -82,9 +82,9 @@ function App() {
           </h2>
           <h2 id="data-source-explanation">
             Monetary donations to public officials are available per the
-            Lobbying Disclosure Act of 1995 and can be found{" "}
+            Lobbying Disclosure Act of 1995 and can be found at{" "}
             <a class="data-link" href="https://lda.senate.gov/api/">
-              here
+              https://lda.senate.gov/api/
             </a>
             .
           </h2>

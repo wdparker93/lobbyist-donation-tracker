@@ -13,20 +13,23 @@ let columnNameArr = [
 let senatorDataArr = [];
 
 function SenatorByState(senatorStateData) {
-  let stateAbbrev = Object.values(senatorStateData.senatorStateData[0])[5];
+  let stateAbbrev = Object.values(senatorStateData.senatorStateData[0])[3];
 
   const populateSenatorData = () => {
     for (let i = 0; i < senatorStateData.senatorStateData.length; i++) {
       let senObj = new Object();
       let id = i + 1;
-      let firstName = Object.values(senatorStateData.senatorStateData[i])[3];
-      let lastName = Object.values(senatorStateData.senatorStateData[i])[2];
-      let party = Object.values(senatorStateData.senatorStateData[i])[4];
+      let firstName = Object.values(senatorStateData.senatorStateData[i])[0];
+      let lastName = Object.values(senatorStateData.senatorStateData[i])[1];
+      let party = Object.values(senatorStateData.senatorStateData[i])[2];
+      let dollarsReceived = Object.values(
+        senatorStateData.senatorStateData[i]
+      )[4];
       senObj.id = id;
       senObj.firstName = firstName;
       senObj.lastName = lastName;
       senObj.party = party;
-      senObj.dollarsReceived = 69;
+      senObj.dollarsReceived = dollarsReceived.toLocaleString("en-US");
       senatorDataArr.push(senObj);
     }
   };
