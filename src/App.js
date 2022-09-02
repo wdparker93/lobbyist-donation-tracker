@@ -3,6 +3,8 @@ import Axios from "axios";
 import React, { useState, useEffect } from "react";
 import SenatorByState from "./secondary_components/components/SenatorByState.js";
 import SenatorByParty from "./secondary_components/components/SenatorByParty.js";
+import SenatorByStateParty from "./secondary_components/components/SenatorByStateParty.js";
+import NoSenatorsExist from "./secondary_components/components/NoSenatorsExist.js";
 
 function App() {
   const [usState, setUsState] = useState("--");
@@ -26,6 +28,8 @@ function App() {
       getSenatorByState();
     } else if (usState === "--" && senator === "--" && party !== "--") {
       getSenatorByParty();
+    } else if (usState !== "--" && senator === "--" && party !== "--") {
+      getSenatorByStateParty();
     }
   };
 
@@ -59,13 +63,38 @@ function App() {
     );
   };
 
+  const getSenatorByStateParty = () => {
+    const params = {
+      state: usState,
+      party: party,
+    };
+    Axios.get(
+      "http://localhost:3001/api/get/byStateParty/" + usState + "/" + party
+    ).then((response) => {
+      setSenatorData(response.data);
+      chooseOutputComponent(response.data);
+    });
+  };
+
   const chooseOutputComponent = (dataParam) => {
-    if (usState !== "--" && senator === "--" && party === "--") {
-      setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
-    } else if (usState === "--" && senator === "--" && party !== "--") {
-      setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
+    console.log(dataParam.length);
+    if (dataParam.length > 0) {
+      console.log("I'm where I shouldn't be");
+      if (usState !== "--" && senator === "--" && party === "--") {
+        setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
+      } else if (usState === "--" && senator === "--" && party !== "--") {
+        setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
+      } else {
+        setOutputComponent(
+          <SenatorByStateParty senatorStatePartyData={dataParam} />
+        );
+      }
     } else {
-      setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
+      let paramList = [];
+      paramList.push(usState);
+      paramList.push(party);
+      paramList.push(senator);
+      setOutputComponent(<NoSenatorsExist emptyDataSet={paramList} />);
     }
   };
 
