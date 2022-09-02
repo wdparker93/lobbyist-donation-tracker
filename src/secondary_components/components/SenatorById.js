@@ -6,6 +6,7 @@ let columnNameArr = [
     firstName: "First",
     lastName: "Last",
     state: "State",
+    party: "Party",
     dollarsReceived: "$ Received",
   },
 ];
@@ -30,6 +31,7 @@ function SenatorById(senatorIdData) {
       senObj.firstName = firstName;
       senObj.lastName = lastName;
       senObj.state = state;
+      senObj.party = party;
       senObj.dollarsReceived = dollarsReceived.toLocaleString("en-US");
       senatorDataArr.push(senObj);
     }
@@ -37,12 +39,14 @@ function SenatorById(senatorIdData) {
 
   const SenatorTableElement = (props) => {
     const { elementData } = props;
-    const { id, firstName, lastName, state, dollarsReceived } = elementData;
+    const { id, firstName, lastName, state, party, dollarsReceived } =
+      elementData;
     let rowClassName = "data-row";
     let numId = "id-" + { id };
     let firstNameId = "first-name-" + { id };
     let lastNameId = "last-name-" + { id };
     let stateId = "state-" + { id };
+    let partyId = "party-" + { id };
     let dollarsReceivedId = "dollars-received-" + { id };
     return (
       <>
@@ -51,6 +55,7 @@ function SenatorById(senatorIdData) {
           <div id={firstNameId}>{firstName}</div>
           <div id={lastNameId}>{lastName}</div>
           <div id={stateId}>{state}</div>
+          <div id={partyId}>{party}</div>
           <div id={dollarsReceivedId}>{dollarsReceived}</div>
         </div>
       </>
