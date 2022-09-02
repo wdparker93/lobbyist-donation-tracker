@@ -1,6 +1,6 @@
 import openpyxl
 
-path = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\Politician_Raw_Name_Recoder.xlsx'
+path = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\output_data_files\\Politician_Raw_Name_Recoder.xlsx'
 
 recoderWB = openpyxl.load_workbook(path)
 recoderSheet = recoderWB.active
@@ -21,11 +21,11 @@ delimitedList = delimitedList[:-2]
 outputCell = recoderSheet.cell(row = 2, column = 6)
 outputCell.value = delimitedList
 
-recoderWB.save('C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\Politician_Raw_Name_Recoder.xlsx')
+recoderWB.save('C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\output_data_files\\Politician_Raw_Name_Recoder.xlsx')
 
 #Save the output string to a text file so only one execution can be done in MySQL
-excelFilePath = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\Politician_Raw_Name_Recoder.xlsx'
-outputFilePath = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\recoder_query_file.txt'
+excelFilePath = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\output_data_files\\Politician_Raw_Name_Recoder.xlsx'
+outputFilePath = 'C:\\Users\\wdpar\\vs_code_repos\\congressional-vote-tracker\\src\\support_files\\output_query_txt_files\\recoder_query_file.txt'
 
 updateQueryPrefix = "UPDATE contributions_data SET RECIPIENT_NAME = '"
 updateQueryInfix = "' WHERE RECIPIENT_NAME_RAW IN ("

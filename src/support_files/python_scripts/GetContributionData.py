@@ -140,7 +140,7 @@ else:
     print('Connection Failed on Request for Page ' + str(pageCounter))
     exit()
 
-progressTrackerFile = os.getcwd() + '\src\support_files\progress_tracker.txt'
+progressTrackerFile = os.getcwd() + '\src\support_files\output_query_txt_files\progress_tracker.txt'
 
 nextPageLink = 'do-While Starter'
 #for i in range(1):    #Test with small number of items

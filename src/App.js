@@ -73,20 +73,16 @@ function App() {
     <div className="App">
       <div className="header" id="main-header">
         <div id="main-headers">
-          <h1 id="main-title">How Did They Vote?</h1>
+          <h1 id="main-title">Where Does The Money Go?</h1>
           <h1 id="data-source-title">Where Does This Information Come From?</h1>
         </div>
         <div id="secondary-headers">
           <h2 id="secondary-title">
-            See how your elected officials are voting - fast and easy.
+            See how much your senators are getting from lobbyists.
           </h2>
           <h2 id="data-source-explanation">
-            The voting data presented by this page are publicly available and
-            can be found at{" "}
-            <a class="data-link" href="https://www.congress.gov/">
-              congress.gov
-            </a>
-            . Monetary disclosure reports can be found{" "}
+            Monetary donations to public officials are available per the
+            Lobbying Disclosure Act of 1995 and can be found{" "}
             <a class="data-link" href="https://lda.senate.gov/api/">
               here
             </a>
@@ -180,22 +176,6 @@ function App() {
               <option value="R">Republican</option>
               <option value="I">Independent</option>
             </select>
-          </div>
-          <div className="selector-wrapper" id="issue-selector-wrapper">
-            <p className="selector-label-text" id="issue-selector-label">
-              Select Issue or Enter Custom
-            </p>
-            <input type="text" list="issue-list" />
-            <datalist id="issue-list">
-              <option>Abortion</option>
-              <option>Gun Control</option>
-              <option>Climate Change</option>
-              <option>War in Ukraine</option>
-              <option>January 6th, 2021</option>
-              <option>Education</option>
-              <option>LGBTQ Rights</option>
-              <option>Immigration</option>
-            </datalist>
           </div>
           <div className="search-button-wrapper">
             <button id="search-button" onClick={handleClick}>
