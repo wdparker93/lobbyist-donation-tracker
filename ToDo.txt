@@ -6,6 +6,6 @@ DONE 4. Get congress member voting data into the DB
   a. Charts, graphs, etc.
 6. Get app hosted on Heroku (cloud).
 DONE 7. Display loading animation while waiting on SQL results.
-8. Finish query building when using multiple selection criteria.
+DONE 8. Finish query building when using multiple selection criteria.
 9. Review and sanitize contribution data before publication.
-10. Improve DB security before publication.
+???? 10. Improve DB security before publication.
