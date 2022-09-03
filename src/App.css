@@ -105,6 +105,10 @@
   top: 2vh;
 }
 
+#senator-selector {
+  width: 12vw;
+}
+
 #party-selector-label {
   color: white;
   font-size: 2.5vh;

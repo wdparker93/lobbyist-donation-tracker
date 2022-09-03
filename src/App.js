@@ -40,6 +40,7 @@ function App() {
   };
 
   const generateSenatorSelectorOptions = (senatorFullNameArr, senatorIdArr) => {
+    clearSenatorSelectorOptions();
     let selector = document.getElementById("senator-selector");
     for (let i = 0; i < senatorFullNameArr.length; i++) {
       let optionName = senatorFullNameArr[i];
@@ -48,6 +49,15 @@ function App() {
       element.textContent = optionName;
       element.value = optionId;
       selector.appendChild(element);
+    }
+    setSenator(senator);
+  };
+
+  const clearSenatorSelectorOptions = () => {
+    let senatorSelector = document.getElementById("senator-selector");
+    console.log(senatorSelector.options.length);
+    while (senatorSelector.options.length > 1) {
+      senatorSelector.remove(1);
     }
   };
 
