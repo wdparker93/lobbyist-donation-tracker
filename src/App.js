@@ -17,12 +17,24 @@ function App() {
   let loading = false;
 
   useEffect(() => {
-    populateSenatorNameArr();
+    populateSenatorNameArr(usState, party);
   });
 
-  const populateSenatorNameArr = () => {
+  const populateSenatorNameArr = (usStateParam, partyParam) => {
+    let usStateForLogic = usStateParam;
+    if (usStateForLogic === "--") {
+      usStateForLogic = usState;
+    }
+    let partyForLogic = partyParam;
+    if (partyForLogic === "--") {
+      partyForLogic = party;
+    }
+    //console.log(usStateForLogic, partyForLogic);
     Axios.get(
-      "http://localhost:3001/api/get/allSenatorNames/" + usState + "/" + party
+      "http://localhost:3001/api/get/allSenatorNames/" +
+        usStateForLogic +
+        "/" +
+        partyForLogic
     ).then((response) => {
       let currentSenator = senator;
       let senatorFullNameArr = [];
@@ -78,11 +90,11 @@ function App() {
    */
   const handleClick = (event) => {
     event.preventDefault();
-    console.log(usState);
-    console.log(senator);
-    console.log(party);
+    //console.log(usState);
+    //console.log(senator);
+    //console.log(party);
     //-------------------------------------------------------------------
-    //-------------------------FUNCTION SELECTOR-------------------------
+    //------------------------FUNCTION SELECTOR--------------------------
     //-------------------------------------------------------------------
     if (usState !== "--" && senator === "--" && party === "--") {
       //STATE ONLY
@@ -110,7 +122,7 @@ function App() {
 
   const handleUsStateChange = (event) => {
     setUsState(event.target.value);
-    populateSenatorNameArr();
+    populateSenatorNameArr(event.target.value, party);
   };
 
   const handleSenatorChange = (event) => {
@@ -119,7 +131,7 @@ function App() {
 
   const handlePartyChange = (event) => {
     setParty(event.target.value);
-    populateSenatorNameArr();
+    populateSenatorNameArr(usState, event.target.value);
   };
 
   const getSenatorByState = () => {
