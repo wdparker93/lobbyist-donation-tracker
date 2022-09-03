@@ -1,11 +1,28 @@
 #output-wrapper-no-senators-exist {
   padding: 1vw;
-  font-size: 5vh;
-  color: black;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-image: url("https://bestanimations.com/media/usa/1149295287usa-american-flag-waving-animated-gif-7.gif");
+  background-repeat: repeat;
+  background-size: cover;
   height: 28vh;
   width: 32vw;
   border-radius: 0.5vh;
   position: relative;
   top: 2vh;
+  text-align: center;
+  font-weight: bolder;
+  align-items: center;
+}
+
+#output-wrapper-no-senators-exist-text {
+  font-size: 5vh;
+  color: black;
+  position: relative;
+  top: 3vh;
+  width: auto;
+  height: auto;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+#output-wrapper-no-senators-exist-text {
+  padding: 1vh 0;
 }

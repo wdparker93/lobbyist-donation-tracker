@@ -19,7 +19,11 @@ function NoSenatorsExist(emptyDataSet) {
   }
   return (
     <>
-      <div id="output-wrapper-no-senators-exist">{emptySetMessage}</div>
+      <div id="output-wrapper-no-senators-exist">
+        <div id="output-wrapper-no-senators-exist-text">
+          <p id="no-senators-exist">{emptySetMessage}</p>
+        </div>
+      </div>
     </>
   );
 }
