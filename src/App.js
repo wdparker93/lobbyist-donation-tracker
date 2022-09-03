@@ -21,22 +21,22 @@ function App() {
   });
 
   const populateSenatorNameArr = () => {
-    Axios.get("http://localhost:3001/api/get/allSenatorNames/").then(
-      (response) => {
-        const senatorFullNameArr = [];
-        const senatorIdArr = [];
-        let senatorNameData = response.data;
-        for (let i = 0; i < senatorNameData.length; i++) {
-          let senatorName = senatorNameData[i];
-          let fullName =
-            senatorName.SIMPLE_FIRST_NAME + " " + senatorName.SIMPLE_LAST_NAME;
-          let id = senatorName.SENATOR_KEY;
-          senatorFullNameArr.push(fullName);
-          senatorIdArr.push(id);
-        }
-        generateSenatorSelectorOptions(senatorFullNameArr, senatorIdArr);
+    Axios.get(
+      "http://localhost:3001/api/get/allSenatorNames/" + usState + "/" + party
+    ).then((response) => {
+      const senatorFullNameArr = [];
+      const senatorIdArr = [];
+      let senatorNameData = response.data;
+      for (let i = 0; i < senatorNameData.length; i++) {
+        let senatorName = senatorNameData[i];
+        let fullName =
+          senatorName.SIMPLE_FIRST_NAME + " " + senatorName.SIMPLE_LAST_NAME;
+        let id = senatorName.SENATOR_KEY;
+        senatorFullNameArr.push(fullName);
+        senatorIdArr.push(id);
       }
-    );
+      generateSenatorSelectorOptions(senatorFullNameArr, senatorIdArr);
+    });
   };
 
   const generateSenatorSelectorOptions = (senatorFullNameArr, senatorIdArr) => {
@@ -75,6 +75,7 @@ function App() {
 
   const handleUsStateChange = (event) => {
     setUsState(event.target.value);
+    populateSenatorNameArr();
   };
 
   const handleSenatorChange = (event) => {
@@ -173,9 +174,13 @@ function App() {
           </h2>
           <h2 id="data-source-explanation">
             Monetary donations to public officials are available per the
-            Lobbying Disclosure Act of 1995 and can be found at{" "}
-            <a class="data-link" href="https://lda.senate.gov/api/">
-              https://lda.senate.gov/api/
+            Lobbying Disclosure Act of 1995 and can be found{" "}
+            <a
+              class="data-link"
+              href="https://lda.senate.gov/api/"
+              target="_blank"
+            >
+              here
             </a>
             .
           </h2>

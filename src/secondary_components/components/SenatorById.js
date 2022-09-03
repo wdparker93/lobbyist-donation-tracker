@@ -20,7 +20,7 @@ function SenatorById(senatorIdData) {
 
   const populateSenatorData = () => {
     for (let i = 0; i < senatorIdData.senatorIdData.length; i++) {
-      let senObj = new Object();
+      let senObj = {};
       let id = i + 1;
       let firstName = Object.values(senatorIdData.senatorIdData[i])[0];
       let lastName = Object.values(senatorIdData.senatorIdData[i])[1];
@@ -41,7 +41,7 @@ function SenatorById(senatorIdData) {
     const { elementData } = props;
     const { id, firstName, lastName, state, party, dollarsReceived } =
       elementData;
-    let rowClassName = "data-row";
+    let rowClassName = "data-row-by-id";
     let numId = "id-" + { id };
     let firstNameId = "first-name-" + { id };
     let lastNameId = "last-name-" + { id };

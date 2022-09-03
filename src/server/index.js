@@ -74,11 +74,29 @@ app.get("/api/get/byStateParty/:usState/:party", (req, res) => {
   });
 });
 
-app.get("/api/get/allSenatorNames/", (req, res) => {
-  const sqlSelect = `SELECT SIMPLE_FIRST_NAME, SIMPLE_LAST_NAME, SENATOR_KEY
-  FROM CURRENT_SENATOR_DATA
-  ORDER BY SIMPLE_LAST_NAME ASC`;
-  db.query(sqlSelect, (err, result) => {
+app.get("/api/get/allSenatorNames/:usState/:party", (req, res) => {
+  let party = req.params.party;
+  let usState = req.params.usState;
+  if (party === "--") {
+    party = "";
+  }
+  if (usState === "--") {
+    usState = "";
+  }
+  let sqlSelect = `SELECT SIMPLE_FIRST_NAME, SIMPLE_LAST_NAME, SENATOR_KEY 
+  FROM CURRENT_SENATOR_DATA`;
+  if (party === "") {
+    sqlSelect += ` WHERE PARTY != ?`;
+  } else {
+    sqlSelect += ` WHERE PARTY = ?`;
+  }
+  if (usState === "") {
+    sqlSelect += ` AND STATE != ?`;
+  } else {
+    sqlSelect += ` AND STATE = ?`;
+  }
+  sqlSelect += ` ORDER BY SIMPLE_LAST_NAME ASC`;
+  db.query(sqlSelect, [party, usState], (err, result) => {
     res.send(result);
   });
 });

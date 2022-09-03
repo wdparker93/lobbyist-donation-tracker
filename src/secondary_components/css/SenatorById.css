@@ -15,7 +15,7 @@
   top: 3vh;
 }
 
-.data-row {
+.data-row-by-id {
   font-size: 2.5vh;
   display: grid;
   border: 1px solid black;
