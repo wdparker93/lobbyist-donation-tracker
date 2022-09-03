@@ -81,14 +81,30 @@ function App() {
     console.log(usState);
     console.log(senator);
     console.log(party);
+    //-------------------------------------------------------------------
+    //-------------------------FUNCTION SELECTOR-------------------------
+    //-------------------------------------------------------------------
     if (usState !== "--" && senator === "--" && party === "--") {
+      //STATE ONLY
       getSenatorByState();
     } else if (usState === "--" && senator === "--" && party !== "--") {
+      //PARTY ONLY
       getSenatorByParty();
-    } else if (usState !== "--" && senator === "--" && party !== "--") {
-      getSenatorByStateParty();
     } else if (usState === "--" && senator !== "--" && party === "--") {
+      //SENATOR ONLY
       getSenatorBySenatorId();
+    } else if (usState !== "--" && senator !== "--" && party === "--") {
+      //STATE & SENATOR
+      getSenatorByStateSenatorId();
+    } else if (usState !== "--" && senator === "--" && party !== "--") {
+      //STATE & PARTY
+      getSenatorByStateParty();
+    } else if (usState === "--" && senator !== "--" && party !== "--") {
+      //PARTY & SENATOR
+      getSenatorBySenatorIdParty();
+    } else if (usState !== "--" && senator !== "--" && party !== "--") {
+      //PARTY & SENATOR & STATE
+      getSenatorByStateSenatorIdParty();
     }
   };
 
@@ -143,11 +159,55 @@ function App() {
     );
   };
 
+  const getSenatorByStateSenatorId = () => {
+    loading = true;
+    chooseOutputComponent(null);
+    Axios.get(
+      "http://localhost:3001/api/get/byUsStateSenatorId/" +
+        usState +
+        "/" +
+        senator
+    ).then((response) => {
+      loading = false;
+      setSenatorData(response.data);
+      chooseOutputComponent(response.data);
+    });
+  };
+
   const getSenatorByStateParty = () => {
     loading = true;
     chooseOutputComponent(null);
     Axios.get(
-      "http://localhost:3001/api/get/byStateParty/" + usState + "/" + party
+      "http://localhost:3001/api/get/byUsStateParty/" + usState + "/" + party
+    ).then((response) => {
+      loading = false;
+      setSenatorData(response.data);
+      chooseOutputComponent(response.data);
+    });
+  };
+
+  const getSenatorBySenatorIdParty = () => {
+    loading = true;
+    chooseOutputComponent(null);
+    Axios.get(
+      "http://localhost:3001/api/get/byPartySenatorId/" + party + "/" + senator
+    ).then((response) => {
+      loading = false;
+      setSenatorData(response.data);
+      chooseOutputComponent(response.data);
+    });
+  };
+
+  const getSenatorByStateSenatorIdParty = () => {
+    loading = true;
+    chooseOutputComponent(null);
+    Axios.get(
+      "http://localhost:3001/api/get/byUsStateSenatorIdParty/" +
+        usState +
+        "/" +
+        senator +
+        "/" +
+        party
     ).then((response) => {
       loading = false;
       setSenatorData(response.data);
@@ -164,12 +224,12 @@ function App() {
           setOutputComponent(<SenatorByState senatorStateData={dataParam} />);
         } else if (usState === "--" && senator === "--" && party !== "--") {
           setOutputComponent(<SenatorByParty senatorPartyData={dataParam} />);
-        } else if (usState === "--" && senator !== "--" && party === "--") {
-          setOutputComponent(<SenatorById senatorIdData={dataParam} />);
-        } else if (usState === "--" && senator !== "--" && party === "--") {
+        } else if (usState !== "--" && senator === "--" && party !== "--") {
           setOutputComponent(
             <SenatorByStateParty senatorStatePartyData={dataParam} />
           );
+        } else if (senator !== "--") {
+          setOutputComponent(<SenatorById senatorIdData={dataParam} />);
         }
       } else {
         let paramList = [];

@@ -58,7 +58,23 @@ app.get("/api/get/bySenatorId/:senatorId", (req, res) => {
   });
 });
 
-app.get("/api/get/byStateParty/:usState/:party", (req, res) => {
+app.get("/api/get/byUsStateSenatorId/:usState/:senatorId", (req, res) => {
+  const senatorId = req.params.senatorId;
+  const usState = req.params.usState;
+  const sqlSelect = `SELECT CSD.SIMPLE_FIRST_NAME, CSD.SIMPLE_LAST_NAME, CSD.PARTY, CSD.STATE, 
+  SUM(CD.DONATION_AMOUNT) AS TOTAL_DOLLARS_RECEIVED FROM CONTRIBUTIONS_DATA CD
+  JOIN CURRENT_SENATOR_DATA CSD ON CSD.SENATOR_KEY = CD.RECIPIENT_ID
+  WHERE CD.RECIPIENT_NAME != ''
+  AND CSD.SENATOR_KEY = ?
+  AND CSD.STATE = ?
+  GROUP BY CD.RECIPIENT_NAME
+  ORDER BY TOTAL_DOLLARS_RECEIVED DESC`;
+  db.query(sqlSelect, [senatorId, usState], (err, result) => {
+    res.send(result);
+  });
+});
+
+app.get("/api/get/byUsStateParty/:usState/:party", (req, res) => {
   const party = req.params.party;
   const usState = req.params.usState;
   const sqlSelect = `SELECT CSD.SIMPLE_FIRST_NAME, CSD.SIMPLE_LAST_NAME, CSD.PARTY, CSD.STATE, 
@@ -73,6 +89,43 @@ app.get("/api/get/byStateParty/:usState/:party", (req, res) => {
     res.send(result);
   });
 });
+
+app.get("/api/get/byPartySenatorId/:party/:senatorId", (req, res) => {
+  const senatorId = req.params.senatorId;
+  const party = req.params.party;
+  const sqlSelect = `SELECT CSD.SIMPLE_FIRST_NAME, CSD.SIMPLE_LAST_NAME, CSD.PARTY, CSD.STATE, 
+  SUM(CD.DONATION_AMOUNT) AS TOTAL_DOLLARS_RECEIVED FROM CONTRIBUTIONS_DATA CD
+  JOIN CURRENT_SENATOR_DATA CSD ON CSD.SENATOR_KEY = CD.RECIPIENT_ID
+  WHERE CD.RECIPIENT_NAME != ''
+  AND CSD.SENATOR_KEY = ?
+  AND CSD.PARTY = ?
+  GROUP BY CD.RECIPIENT_NAME
+  ORDER BY TOTAL_DOLLARS_RECEIVED DESC`;
+  db.query(sqlSelect, [senatorId, party], (err, result) => {
+    res.send(result);
+  });
+});
+
+app.get(
+  "/api/get/byUsStateSenatorIdParty/:usState/:senatorId/:party",
+  (req, res) => {
+    const senatorId = req.params.senatorId;
+    const party = req.params.party;
+    const usState = req.params.usState;
+    const sqlSelect = `SELECT CSD.SIMPLE_FIRST_NAME, CSD.SIMPLE_LAST_NAME, CSD.PARTY, CSD.STATE, 
+  SUM(CD.DONATION_AMOUNT) AS TOTAL_DOLLARS_RECEIVED FROM CONTRIBUTIONS_DATA CD
+  JOIN CURRENT_SENATOR_DATA CSD ON CSD.SENATOR_KEY = CD.RECIPIENT_ID
+  WHERE CD.RECIPIENT_NAME != ''
+  AND CSD.SENATOR_KEY = ?
+  AND CSD.PARTY = ?
+  AND CSD.STATE = ?
+  GROUP BY CD.RECIPIENT_NAME
+  ORDER BY TOTAL_DOLLARS_RECEIVED DESC`;
+    db.query(sqlSelect, [senatorId, party, usState], (err, result) => {
+      res.send(result);
+    });
+  }
+);
 
 app.get("/api/get/allSenatorNames/:usState/:party", (req, res) => {
   let party = req.params.party;
