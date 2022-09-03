@@ -24,8 +24,9 @@ function App() {
     Axios.get(
       "http://localhost:3001/api/get/allSenatorNames/" + usState + "/" + party
     ).then((response) => {
-      const senatorFullNameArr = [];
-      const senatorIdArr = [];
+      let currentSenator = senator;
+      let senatorFullNameArr = [];
+      let senatorIdArr = [];
       let senatorNameData = response.data;
       for (let i = 0; i < senatorNameData.length; i++) {
         let senatorName = senatorNameData[i];
@@ -36,6 +37,16 @@ function App() {
         senatorIdArr.push(id);
       }
       generateSenatorSelectorOptions(senatorFullNameArr, senatorIdArr);
+      if (senatorIdArr.includes(currentSenator)) {
+        setSenator(currentSenator);
+        let indexOfCurrentSenator = senatorIdArr.indexOf(currentSenator) + 1;
+        document.getElementById("senator-selector").options[
+          indexOfCurrentSenator
+        ].selected = true;
+      } else {
+        setSenator("--");
+        document.getElementById("senator-selector").options[0].selected = true;
+      }
     });
   };
 
@@ -50,12 +61,10 @@ function App() {
       element.value = optionId;
       selector.appendChild(element);
     }
-    setSenator(senator);
   };
 
   const clearSenatorSelectorOptions = () => {
     let senatorSelector = document.getElementById("senator-selector");
-    console.log(senatorSelector.options.length);
     while (senatorSelector.options.length > 1) {
       senatorSelector.remove(1);
     }
@@ -94,6 +103,7 @@ function App() {
 
   const handlePartyChange = (event) => {
     setParty(event.target.value);
+    populateSenatorNameArr();
   };
 
   const getSenatorByState = () => {
