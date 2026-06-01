@@ -55,7 +55,8 @@ function normalizeName(name) {
   return name
     .toLowerCase()
     .replace(/^(the\s+)?honorable\s+/i, '')
-    .replace(/\b(sen\.?|senator|rep\.?|representative|dr\.?|mr\.?|ms\.?|mrs\.?)\s*/gi, '')
+    // Longer alternatives must come before their prefixes (senator before sen.)
+    .replace(/\b(senator|representative|sen\.?|rep\.?|dr\.?|mr\.?|ms\.?|mrs\.?)\s*/gi, '')
     .replace(/\b[a-z]\.\s*/g, '')          // strip lone initials: "J. "
     .replace(/[^a-z\s\-]/g, '')            // strip punctuation except hyphens
     .replace(/\s+/g, ' ')
