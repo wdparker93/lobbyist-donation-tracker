@@ -1,9 +1,11 @@
 {
-  "last_synced_at": null,
-  "years_synced": [],
+  "last_synced_at": "2026-06-01T01:01:41.555Z",
+  "years_synced": [
+    2026
+  ],
   "stats": {
-    "total_rows": 0,
-    "total_matched": 0,
-    "total_unmatched": 0
+    "total_rows": 7,
+    "total_matched": 7,
+    "total_unmatched": 14
   }
 }
