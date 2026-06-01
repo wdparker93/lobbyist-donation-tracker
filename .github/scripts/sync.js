@@ -261,13 +261,14 @@ function parseCSVLine(line) {
 async function main() {
   const now = new Date()
   const currentYear = now.getFullYear()
-  // Also sync prior year in Jan/Feb to catch late filers
-  const yearsToSync = now.getMonth() < 2
-    ? [currentYear - 1, currentYear]
-    : [currentYear]
+
+  // Always cover the last 5 years so every run includes the prior election cycle.
+  // e.g. in 2026 → [2022, 2023, 2024, 2025, 2026]
+  const LOOKBACK_YEARS = 5
+  const yearsToSync = Array.from({ length: LOOKBACK_YEARS }, (_, i) => currentYear - (LOOKBACK_YEARS - 1 - i))
 
   console.log(`\n=== LDA Sync — ${now.toISOString()} ===`)
-  console.log(`Years to sync: ${yearsToSync.join(', ')}`)
+  console.log(`Years window: ${yearsToSync[0]}–${yearsToSync.at(-1)} (${LOOKBACK_YEARS}-year lookback)`)
 
   const senators = loadSenators()
   console.log(`Loaded ${senators.length} senators`)
@@ -281,19 +282,36 @@ async function main() {
   const unmatchedMap = loadUnmatched()
   const { match } = buildMatcher(senators, overrides)
 
-  // Collect new CSV rows and updated unmatched entries
+  // Load per-year filing counts cached from the last run.
+  // The LDA API returns filings oldest-first, so when the total count grows
+  // we can skip straight to the new pages instead of re-scanning everything.
+  const existingState = JSON.parse(fs.readFileSync(SYNC_STATE_JSON, 'utf8'))
+  const apiCountByYear = existingState.api_count_by_year ?? {}
+
   const newRows = []
   let newMatched = 0, newUnmatched = 0
 
   for (const year of yearsToSync) {
-    console.log(`\n-- Fetching ${year} filings --`)
+    console.log(`\n-- ${year} --`)
     const first = await fetchPage(year, 1)
-    const totalPages = Math.ceil(first.count / PAGE_SIZE)
-    console.log(`  ${first.count} filings across ${totalPages} pages`)
+    const totalCount = first.count
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+    const cachedCount = apiCountByYear[year] ?? 0
+
+    if (totalCount === cachedCount) {
+      console.log(`  ${totalCount} filings — unchanged since last sync, skipping`)
+      continue
+    }
+
+    // Jump to the first page that could contain new filings.
+    // (Oldest-first order means new filings land at the end.)
+    const startPage = cachedCount > 0 ? Math.floor(cachedCount / PAGE_SIZE) + 1 : 1
+    const newCount = totalCount - cachedCount
+    console.log(`  ${totalCount} filings total, ${newCount} new — fetching pages ${startPage}–${totalPages}`)
 
     let processed = 0, skipped = 0
 
-    for (let start = 1; start <= totalPages; start += MAX_PARALLEL) {
+    for (let start = startPage; start <= totalPages; start += MAX_PARALLEL) {
       const pageNums = []
       for (let p = start; p < start + MAX_PARALLEL && p <= totalPages; p++) pageNums.push(p)
 
@@ -306,7 +324,6 @@ async function main() {
 
           const matches = match(item.honoree_raw)
           if (matches.length === 0) {
-            // Track unmatched for review
             const norm = normalizeName(item.honoree_raw)
             const existing = unmatchedMap.get(norm) ?? {
               raw: item.honoree_raw, count: 0, last_seen: '', sample_registrant: item.registrant
@@ -319,7 +336,6 @@ async function main() {
             newUnmatched++
           } else {
             for (const m of matches) {
-              // For compound names, split the amount evenly
               const splitAmount = (item.amount / matches.length).toFixed(2)
               newRows.push(csvRow([
                 `${item.id}_s${matches.indexOf(m)}`,
@@ -344,6 +360,9 @@ async function main() {
       process.stdout.write(`\r  Page ${done}/${totalPages} — ${newMatched} matched, ${newUnmatched} unmatched`)
     }
     console.log(`\n  Done: ${processed} new items processed, ${skipped} already-seen UUIDs skipped`)
+
+    // Record the new filing count so future runs can skip this year if unchanged
+    apiCountByYear[year] = totalCount
   }
 
   // ── Write contributions.csv ─────────────────────────────────────────────────
@@ -371,10 +390,10 @@ async function main() {
   console.log(`Updated unmatched.csv with ${unmatchedMap.size} unique unmatched names`)
 
   // ── Write sync_state.json ───────────────────────────────────────────────────
-  const existingState = JSON.parse(fs.readFileSync(SYNC_STATE_JSON, 'utf8'))
   const newState = {
     last_synced_at: now.toISOString(),
-    years_synced: [...new Set([...(existingState.years_synced ?? []), ...yearsToSync])].sort(),
+    lookback_years: LOOKBACK_YEARS,
+    api_count_by_year: apiCountByYear,
     stats: {
       total_rows: (existingState.stats?.total_rows ?? 0) + newRows.length,
       total_matched: (existingState.stats?.total_matched ?? 0) + newMatched,

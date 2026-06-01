@@ -1,8 +1,7 @@
 {
   "last_synced_at": "2026-06-01T01:01:41.555Z",
-  "years_synced": [
-    2026
-  ],
+  "lookback_years": 5,
+  "api_count_by_year": {},
   "stats": {
     "total_rows": 7,
     "total_matched": 7,
