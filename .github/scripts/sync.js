@@ -30,9 +30,8 @@ const SENATORS_JS       = path.join(ROOT, 'src', 'data', 'senators.js')
 
 const LEGISLATORS_URL = 'https://unitedstates.github.io/congress-legislators/legislators-current.json'
 const LDA_BASE        = 'https://lda.senate.gov/api/v1/contributions/'
-const PAGE_SIZE       = 100
-const MAX_PARALLEL    = 2     // conservative to avoid 429s
-const BATCH_DELAY_MS  = 500   // pause between parallel batches
+const PAGE_SIZE       = 300   // LDA API accepts up to ~300; reduces total calls ~3x
+const MAX_PARALLEL    = 2
 const FUZZY_THRESHOLD = 0.75
 
 const PARTY_ABBREV = { Democrat: 'D', Republican: 'R', Independent: 'I' }
@@ -474,7 +473,6 @@ async function main() {
 
       const done = Math.min(start + MAX_PARALLEL - 1, totalPages)
       process.stdout.write(`\r  Page ${done}/${totalPages} — ${yearMatched} matched, ${yearUnmatched} unmatched`)
-      await sleep(BATCH_DELAY_MS)
     }
 
     // Flush this year's rows to disk immediately so a failure on a later
