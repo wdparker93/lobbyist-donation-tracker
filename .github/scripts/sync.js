@@ -29,9 +29,10 @@ const UNMATCHED_CSV     = path.join(ROOT, 'data', 'unmatched.csv')
 const SENATORS_JS       = path.join(ROOT, 'src', 'data', 'senators.js')
 
 const LEGISLATORS_URL = 'https://unitedstates.github.io/congress-legislators/legislators-current.json'
-const LDA_BASE   = 'https://lda.senate.gov/api/v1/contributions/'
-const PAGE_SIZE  = 100
-const MAX_PARALLEL = 5
+const LDA_BASE        = 'https://lda.senate.gov/api/v1/contributions/'
+const PAGE_SIZE       = 100
+const MAX_PARALLEL    = 2     // conservative to avoid 429s
+const BATCH_DELAY_MS  = 500   // pause between parallel batches
 const FUZZY_THRESHOLD = 0.75
 
 const PARTY_ABBREV = { Democrat: 'D', Republican: 'R', Independent: 'I' }
@@ -287,12 +288,24 @@ function buildMatcher(senators, overrides) {
   return { match }
 }
 
-// ── LDA API fetcher ───────────────────────────────────────────────────────────
-async function fetchPage(year, page) {
+// ── LDA API fetcher with retry / backoff ─────────────────────────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+async function fetchPage(year, page, attempt = 0) {
   const url = `${LDA_BASE}?format=json&filing_year=${year}&limit=${PAGE_SIZE}&page=${page}`
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`LDA API ${res.status} on page ${page}`)
-  return res.json()
+  if (res.ok) return res.json()
+
+  if (res.status === 429 && attempt < 6) {
+    // Honour Retry-After if present, otherwise exponential backoff (4s, 8s, 16s…)
+    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '0', 10)
+    const wait = retryAfter > 0 ? retryAfter * 1000 : Math.min(60_000, 4_000 * 2 ** attempt)
+    process.stdout.write(`\n  429 on page ${page} — waiting ${wait / 1000}s...\n`)
+    await sleep(wait)
+    return fetchPage(year, page, attempt + 1)
+  }
+
+  throw new Error(`LDA API ${res.status} on page ${page} (attempt ${attempt + 1})`)
 }
 
 function extractItems(filings) {
@@ -392,8 +405,7 @@ async function main() {
   const existingState = JSON.parse(fs.readFileSync(SYNC_STATE_JSON, 'utf8'))
   const apiCountByYear = existingState.api_count_by_year ?? {}
 
-  const newRows = []
-  let newMatched = 0, newUnmatched = 0
+  let totalNewMatched = 0, totalNewRows = 0
 
   for (const year of yearsToSync) {
     console.log(`\n-- ${year} --`)
@@ -407,13 +419,12 @@ async function main() {
       continue
     }
 
-    // Jump to the first page that could contain new filings.
-    // (Oldest-first order means new filings land at the end.)
     const startPage = cachedCount > 0 ? Math.floor(cachedCount / PAGE_SIZE) + 1 : 1
     const newCount = totalCount - cachedCount
     console.log(`  ${totalCount} filings total, ${newCount} new — fetching pages ${startPage}–${totalPages}`)
 
-    let processed = 0, skipped = 0
+    const yearRows = []
+    let processed = 0, skipped = 0, yearMatched = 0, yearUnmatched = 0
 
     for (let start = startPage; start <= totalPages; start += MAX_PARALLEL) {
       const pageNums = []
@@ -425,6 +436,7 @@ async function main() {
         for (const item of items) {
           if (processedUUIDs.has(item.filing_uuid)) { skipped++; continue }
           processed++
+          processedUUIDs.add(item.filing_uuid) // prevent intra-run dupes
 
           const matches = match(item.honoree_raw)
           if (matches.length === 0) {
@@ -437,11 +449,11 @@ async function main() {
               count: existing.count + 1,
               last_seen: item.date || now.toISOString().slice(0, 10),
             })
-            newUnmatched++
+            yearUnmatched++
           } else {
             for (const m of matches) {
               const splitAmount = (item.amount / matches.length).toFixed(2)
-              newRows.push(csvRow([
+              yearRows.push(csvRow([
                 `${item.id}_s${matches.indexOf(m)}`,
                 item.filing_uuid,
                 item.filing_year,
@@ -454,36 +466,39 @@ async function main() {
                 item.date,
                 item.payee_name,
               ]))
-              newMatched++
+              yearMatched++
             }
           }
         }
       }
 
       const done = Math.min(start + MAX_PARALLEL - 1, totalPages)
-      process.stdout.write(`\r  Page ${done}/${totalPages} — ${newMatched} matched, ${newUnmatched} unmatched`)
+      process.stdout.write(`\r  Page ${done}/${totalPages} — ${yearMatched} matched, ${yearUnmatched} unmatched`)
+      await sleep(BATCH_DELAY_MS)
     }
-    console.log(`\n  Done: ${processed} new items processed, ${skipped} already-seen UUIDs skipped`)
 
-    // Record the new filing count so future runs can skip this year if unchanged
+    // Flush this year's rows to disk immediately so a failure on a later
+    // year doesn't lose progress (UUID dedup prevents re-processing on retry)
+    if (yearRows.length > 0) {
+      const needsHeader = !fs.existsSync(CONTRIBUTIONS_CSV) ||
+        fs.readFileSync(CONTRIBUTIONS_CSV, 'utf8').trim() === 'id,filing_uuid,filing_year,filing_period,senator_id,honoree_raw,registrant,lobbyist,amount,date,payee_name'
+      if (needsHeader) {
+        fs.writeFileSync(CONTRIBUTIONS_CSV,
+          'id,filing_uuid,filing_year,filing_period,senator_id,honoree_raw,registrant,lobbyist,amount,date,payee_name\n' +
+          yearRows.join('\n') + '\n')
+      } else {
+        fs.appendFileSync(CONTRIBUTIONS_CSV, yearRows.join('\n') + '\n')
+      }
+    }
+
     apiCountByYear[year] = totalCount
+    totalNewMatched += yearMatched
+    totalNewRows += yearRows.length
+    console.log(`\n  Done: ${processed} processed, ${skipped} skipped, ${yearMatched} matched, ${yearUnmatched} unmatched`)
   }
 
-  // ── Write contributions.csv ─────────────────────────────────────────────────
-  if (newRows.length > 0) {
-    const needsHeader = !fs.existsSync(CONTRIBUTIONS_CSV) ||
-      fs.readFileSync(CONTRIBUTIONS_CSV, 'utf8').trim() === ''
-    const header = 'id,filing_uuid,filing_year,filing_period,senator_id,honoree_raw,registrant,lobbyist,amount,date,payee_name\n'
-    const content = (needsHeader ? header : '') + newRows.join('\n') + '\n'
-    if (needsHeader) {
-      fs.writeFileSync(CONTRIBUTIONS_CSV, content)
-    } else {
-      fs.appendFileSync(CONTRIBUTIONS_CSV, newRows.join('\n') + '\n')
-    }
-    console.log(`\nAppended ${newRows.length} rows to contributions.csv`)
-  } else {
-    console.log('\nNo new rows to append.')
-  }
+  console.log(`\nTotal new rows written: ${totalNewRows}`)
+  if (totalNewRows === 0) console.log('(No new contributions found)')
 
   // ── Write unmatched.csv ─────────────────────────────────────────────────────
   const unmatchedHeader = 'raw_name,count,last_seen,sample_registrant\n'
@@ -499,14 +514,14 @@ async function main() {
     lookback_years: LOOKBACK_YEARS,
     api_count_by_year: apiCountByYear,
     stats: {
-      total_rows: (existingState.stats?.total_rows ?? 0) + newRows.length,
-      total_matched: (existingState.stats?.total_matched ?? 0) + newMatched,
+      total_rows: (existingState.stats?.total_rows ?? 0) + totalNewRows,
+      total_matched: (existingState.stats?.total_matched ?? 0) + totalNewMatched,
       total_unmatched: unmatchedMap.size,
     },
   }
   fs.writeFileSync(SYNC_STATE_JSON, JSON.stringify(newState, null, 2) + '\n')
   console.log(`Updated sync_state.json`)
-  console.log(`\nSync complete. ${newMatched} new matched rows, ${unmatchedMap.size} total unmatched names.`)
+  console.log(`\nSync complete. ${totalNewMatched} new matched rows, ${unmatchedMap.size} total unmatched names.`)
 }
 
 main().catch(err => { console.error(err); process.exit(1) })
