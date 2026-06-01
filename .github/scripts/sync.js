@@ -1,0 +1,388 @@
+#!/usr/bin/env node
+/**
+ * LDA Contribution Sync Script
+ * Fetches new filings from the Senate LDA API and appends matched senator
+ * contributions to public/data/contributions.csv.
+ *
+ * Incremental: uses the filing_uuid as the deduplication key.
+ * The CSV itself is the source of truth for what's been processed.
+ *
+ * Name matching order:
+ *   1. Exact match against name_overrides.csv (human-curated)
+ *   2. Exact alias match from senators roster
+ *   3. Fuzzy Levenshtein match (confidence threshold)
+ *   4. Multi-name split (e.g. "Sanders/Warren" → two rows)
+ * Unmatched names go to data/unmatched.csv for review.
+ */
+
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(__dirname, '..', '..')
+
+const CONTRIBUTIONS_CSV = path.join(ROOT, 'public', 'data', 'contributions.csv')
+const SYNC_STATE_JSON = path.join(ROOT, 'public', 'data', 'sync_state.json')
+const NAME_OVERRIDES_CSV = path.join(ROOT, 'data', 'name_overrides.csv')
+const UNMATCHED_CSV = path.join(ROOT, 'data', 'unmatched.csv')
+const SENATORS_JS = path.join(ROOT, 'src', 'data', 'senators.js')
+
+const LDA_BASE = 'https://lda.senate.gov/api/v1/contributions/'
+const PAGE_SIZE = 100
+const MAX_PARALLEL = 5
+const FUZZY_THRESHOLD = 0.75   // minimum similarity score to auto-match
+
+// ── Levenshtein similarity (0–1) ─────────────────────────────────────────────
+function similarity(a, b) {
+  if (a === b) return 1
+  if (!a || !b) return 0
+  const m = a.length, n = b.length
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)])
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+    }
+  }
+  return 1 - dp[m][n] / Math.max(m, n)
+}
+
+// ── Name normalisation ────────────────────────────────────────────────────────
+function normalizeName(name) {
+  return name
+    .toLowerCase()
+    .replace(/^(the\s+)?honorable\s+/i, '')
+    .replace(/\b(sen\.?|senator|rep\.?|representative|dr\.?|mr\.?|ms\.?|mrs\.?)\s*/gi, '')
+    .replace(/\b[a-z]\.\s*/g, '')          // strip lone initials: "J. "
+    .replace(/[^a-z\s\-]/g, '')            // strip punctuation except hyphens
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Split compound names: "Sanders/Warren", "Cruz and Cornyn", "Cruz & Cornyn"
+function splitCompoundName(raw) {
+  return raw
+    .split(/[\/|]|\s+and\s+|\s*&\s*/i)
+    .map(p => p.trim())
+    .filter(p => p.length > 2)
+}
+
+// ── Load senator roster from senators.js (parse the export statically) ───────
+function loadSenators() {
+  const src = fs.readFileSync(SENATORS_JS, 'utf8')
+  // Quick-and-dirty extraction: find SENATORS array entries
+  const senators = []
+  const re = /\{[^}]+id:\s*'([^']+)'[^}]+firstName:\s*'([^']+)'[^}]+lastName:\s*'([^']+)'[^}]+state:\s*'([^']+)'[^}]+party:\s*'([^']+)'[^}]+aliases:\s*\[([^\]]+)\]/g
+  let m
+  while ((m = re.exec(src)) !== null) {
+    const [, id, firstName, lastName, state, party, aliasesRaw] = m
+    const aliases = aliasesRaw.match(/'([^']+)'/g)?.map(s => s.slice(1, -1)) ?? []
+    senators.push({ id, firstName, lastName, state, party, aliases })
+  }
+  return senators
+}
+
+// ── Load name_overrides.csv ───────────────────────────────────────────────────
+function loadOverrides() {
+  const overrides = new Map() // normalised raw_name → senator_id
+  if (!fs.existsSync(NAME_OVERRIDES_CSV)) return overrides
+  const lines = fs.readFileSync(NAME_OVERRIDES_CSV, 'utf8').trim().split('\n').slice(1) // skip header
+  for (const line of lines) {
+    const [raw, senatorId] = parseCSVLine(line)
+    if (raw && senatorId) {
+      overrides.set(normalizeName(raw), senatorId.trim())
+    }
+  }
+  return overrides
+}
+
+// ── Load unmatched names from existing unmatched.csv ─────────────────────────
+function loadUnmatched() {
+  const unmatched = new Map() // normalised name → { raw, count, last_seen, sample_registrant }
+  if (!fs.existsSync(UNMATCHED_CSV)) return unmatched
+  const lines = fs.readFileSync(UNMATCHED_CSV, 'utf8').trim().split('\n').slice(1)
+  for (const line of lines) {
+    const [raw, count, last_seen, sample_registrant] = parseCSVLine(line)
+    if (raw) {
+      unmatched.set(normalizeName(raw), {
+        raw,
+        count: parseInt(count, 10) || 0,
+        last_seen,
+        sample_registrant,
+      })
+    }
+  }
+  return unmatched
+}
+
+// ── Load existing filing_uuids from contributions.csv ────────────────────────
+function loadProcessedUUIDs() {
+  if (!fs.existsSync(CONTRIBUTIONS_CSV)) return new Set()
+  const content = fs.readFileSync(CONTRIBUTIONS_CSV, 'utf8')
+  const uuids = new Set()
+  const lines = content.trim().split('\n').slice(1) // skip header
+  for (const line of lines) {
+    // id column = filing_uuid_N, so uuid = everything before the last underscore+digits
+    const id = parseCSVLine(line)[0]
+    if (id) {
+      const uuid = id.replace(/_\d+$/, '')
+      uuids.add(uuid)
+    }
+  }
+  return uuids
+}
+
+// ── Build matcher ─────────────────────────────────────────────────────────────
+function buildMatcher(senators, overrides) {
+  // Alias map: normalised alias → senator id
+  const aliasMap = new Map()
+  for (const s of senators) {
+    const fullName = `${s.firstName} ${s.lastName}`
+    aliasMap.set(normalizeName(fullName), s.id)
+    for (const alias of s.aliases) {
+      aliasMap.set(normalizeName(alias), s.id)
+    }
+  }
+
+  function matchOne(raw) {
+    const norm = normalizeName(raw)
+    if (!norm || norm.length < 3) return null
+
+    // 1. Human override
+    if (overrides.has(norm)) return { id: overrides.get(norm), confidence: 1, method: 'override' }
+
+    // 2. Exact alias
+    if (aliasMap.has(norm)) return { id: aliasMap.get(norm), confidence: 1, method: 'alias' }
+
+    // 3. Fuzzy match against all known aliases
+    let best = null, bestScore = 0
+    for (const [alias, id] of aliasMap) {
+      const score = similarity(norm, alias)
+      if (score > bestScore) { bestScore = score; best = id }
+    }
+    if (bestScore >= FUZZY_THRESHOLD) {
+      return { id: best, confidence: bestScore, method: 'fuzzy' }
+    }
+
+    return null
+  }
+
+  // Returns array of { id, confidence, method } — may be >1 for compound names
+  function match(rawHonoreeName) {
+    const single = matchOne(rawHonoreeName)
+    if (single) return [single]
+
+    // Try splitting compound names
+    const parts = splitCompoundName(rawHonoreeName)
+    if (parts.length > 1) {
+      const results = parts.map(matchOne).filter(Boolean)
+      if (results.length > 0) return results
+    }
+
+    return []
+  }
+
+  return { match }
+}
+
+// ── LDA API fetcher ───────────────────────────────────────────────────────────
+async function fetchPage(year, page) {
+  const url = `${LDA_BASE}?format=json&filing_year=${year}&limit=${PAGE_SIZE}&page=${page}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`LDA API ${res.status} on page ${page}`)
+  return res.json()
+}
+
+function extractItems(filings) {
+  const out = []
+  for (const filing of filings) {
+    if (!filing.contribution_items?.length) continue
+    const registrant = filing.registrant?.name ?? ''
+    const lobbyist = filing.lobbyist
+      ? `${filing.lobbyist.first_name ?? ''} ${filing.lobbyist.last_name ?? ''}`.trim()
+      : ''
+    for (let i = 0; i < filing.contribution_items.length; i++) {
+      const item = filing.contribution_items[i]
+      const amount = parseFloat(item.amount)
+      if (!item.honoree_name || isNaN(amount) || amount <= 0) continue
+      out.push({
+        id: `${filing.filing_uuid}_${i}`,
+        filing_uuid: filing.filing_uuid,
+        filing_year: filing.filing_year,
+        filing_period: filing.filing_period_display ?? '',
+        honoree_raw: item.honoree_name,
+        registrant,
+        lobbyist,
+        amount,
+        date: item.date ?? '',
+        payee_name: item.payee_name ?? '',
+      })
+    }
+  }
+  return out
+}
+
+// ── CSV helpers ───────────────────────────────────────────────────────────────
+function csvEscape(v) {
+  const s = String(v ?? '')
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? `"${s.replace(/"/g, '""')}"`
+    : s
+}
+
+function csvRow(fields) {
+  return fields.map(csvEscape).join(',')
+}
+
+function parseCSVLine(line) {
+  // Simple CSV line parser (handles quoted fields)
+  const fields = []
+  let field = '', inQuote = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') { field += '"'; i++ }
+      else inQuote = !inQuote
+    } else if (ch === ',' && !inQuote) {
+      fields.push(field); field = ''
+    } else {
+      field += ch
+    }
+  }
+  fields.push(field)
+  return fields
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  // Also sync prior year in Jan/Feb to catch late filers
+  const yearsToSync = now.getMonth() < 2
+    ? [currentYear - 1, currentYear]
+    : [currentYear]
+
+  console.log(`\n=== LDA Sync — ${now.toISOString()} ===`)
+  console.log(`Years to sync: ${yearsToSync.join(', ')}`)
+
+  const senators = loadSenators()
+  console.log(`Loaded ${senators.length} senators`)
+
+  const overrides = loadOverrides()
+  console.log(`Loaded ${overrides.size} name overrides`)
+
+  const processedUUIDs = loadProcessedUUIDs()
+  console.log(`Already processed: ${processedUUIDs.size} filing UUIDs`)
+
+  const unmatchedMap = loadUnmatched()
+  const { match } = buildMatcher(senators, overrides)
+
+  // Collect new CSV rows and updated unmatched entries
+  const newRows = []
+  let newMatched = 0, newUnmatched = 0
+
+  for (const year of yearsToSync) {
+    console.log(`\n-- Fetching ${year} filings --`)
+    const first = await fetchPage(year, 1)
+    const totalPages = Math.ceil(first.count / PAGE_SIZE)
+    console.log(`  ${first.count} filings across ${totalPages} pages`)
+
+    let processed = 0, skipped = 0
+
+    for (let start = 1; start <= totalPages; start += MAX_PARALLEL) {
+      const pageNums = []
+      for (let p = start; p < start + MAX_PARALLEL && p <= totalPages; p++) pageNums.push(p)
+
+      const pages = await Promise.all(pageNums.map(p => fetchPage(year, p)))
+      for (const page of pages) {
+        const items = extractItems(page.results)
+        for (const item of items) {
+          if (processedUUIDs.has(item.filing_uuid)) { skipped++; continue }
+          processed++
+
+          const matches = match(item.honoree_raw)
+          if (matches.length === 0) {
+            // Track unmatched for review
+            const norm = normalizeName(item.honoree_raw)
+            const existing = unmatchedMap.get(norm) ?? {
+              raw: item.honoree_raw, count: 0, last_seen: '', sample_registrant: item.registrant
+            }
+            unmatchedMap.set(norm, {
+              ...existing,
+              count: existing.count + 1,
+              last_seen: item.date || now.toISOString().slice(0, 10),
+            })
+            newUnmatched++
+          } else {
+            for (const m of matches) {
+              // For compound names, split the amount evenly
+              const splitAmount = (item.amount / matches.length).toFixed(2)
+              newRows.push(csvRow([
+                `${item.id}_s${matches.indexOf(m)}`,
+                item.filing_uuid,
+                item.filing_year,
+                item.filing_period,
+                m.id,
+                item.honoree_raw,
+                item.registrant,
+                item.lobbyist,
+                splitAmount,
+                item.date,
+                item.payee_name,
+              ]))
+              newMatched++
+            }
+          }
+        }
+      }
+
+      const done = Math.min(start + MAX_PARALLEL - 1, totalPages)
+      process.stdout.write(`\r  Page ${done}/${totalPages} — ${newMatched} matched, ${newUnmatched} unmatched`)
+    }
+    console.log(`\n  Done: ${processed} new items processed, ${skipped} already-seen UUIDs skipped`)
+  }
+
+  // ── Write contributions.csv ─────────────────────────────────────────────────
+  if (newRows.length > 0) {
+    const needsHeader = !fs.existsSync(CONTRIBUTIONS_CSV) ||
+      fs.readFileSync(CONTRIBUTIONS_CSV, 'utf8').trim() === ''
+    const header = 'id,filing_uuid,filing_year,filing_period,senator_id,honoree_raw,registrant,lobbyist,amount,date,payee_name\n'
+    const content = (needsHeader ? header : '') + newRows.join('\n') + '\n'
+    if (needsHeader) {
+      fs.writeFileSync(CONTRIBUTIONS_CSV, content)
+    } else {
+      fs.appendFileSync(CONTRIBUTIONS_CSV, newRows.join('\n') + '\n')
+    }
+    console.log(`\nAppended ${newRows.length} rows to contributions.csv`)
+  } else {
+    console.log('\nNo new rows to append.')
+  }
+
+  // ── Write unmatched.csv ─────────────────────────────────────────────────────
+  const unmatchedHeader = 'raw_name,count,last_seen,sample_registrant\n'
+  const unmatchedRows = [...unmatchedMap.values()]
+    .sort((a, b) => b.count - a.count)
+    .map(u => csvRow([u.raw, u.count, u.last_seen, u.sample_registrant]))
+  fs.writeFileSync(UNMATCHED_CSV, unmatchedHeader + unmatchedRows.join('\n') + '\n')
+  console.log(`Updated unmatched.csv with ${unmatchedMap.size} unique unmatched names`)
+
+  // ── Write sync_state.json ───────────────────────────────────────────────────
+  const existingState = JSON.parse(fs.readFileSync(SYNC_STATE_JSON, 'utf8'))
+  const newState = {
+    last_synced_at: now.toISOString(),
+    years_synced: [...new Set([...(existingState.years_synced ?? []), ...yearsToSync])].sort(),
+    stats: {
+      total_rows: (existingState.stats?.total_rows ?? 0) + newRows.length,
+      total_matched: (existingState.stats?.total_matched ?? 0) + newMatched,
+      total_unmatched: unmatchedMap.size,
+    },
+  }
+  fs.writeFileSync(SYNC_STATE_JSON, JSON.stringify(newState, null, 2) + '\n')
+  console.log(`Updated sync_state.json`)
+  console.log(`\nSync complete. ${newMatched} new matched rows, ${unmatchedMap.size} total unmatched names.`)
+}
+
+main().catch(err => { console.error(err); process.exit(1) })

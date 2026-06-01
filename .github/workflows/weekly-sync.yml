@@ -1,0 +1,49 @@
+name: Weekly LDA Data Sync
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Every Monday at 7am UTC
+  workflow_dispatch:        # Manual trigger from Actions tab
+
+permissions:
+  contents: write           # So the job can commit the updated CSVs
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run sync script
+        run: node .github/scripts/sync.js
+
+      - name: Commit updated data files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/contributions.csv \
+                  public/data/sync_state.json \
+                  data/unmatched.csv
+          # Only commit if something changed
+          git diff --cached --quiet || git commit -m "chore: weekly LDA data sync $(date -u +%Y-%m-%d)"
+
+      - name: Push changes
+        run: git push
+
+      - name: Trigger GitHub Pages deploy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'master',
+            })
