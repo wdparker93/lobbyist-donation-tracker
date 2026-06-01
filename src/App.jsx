@@ -34,7 +34,12 @@ function Dashboard() {
 
       <main className="mx-auto max-w-screen-2xl px-4 py-6">
         <div className="mb-4">
-          <DataStatus syncState={data?.syncState} rowCount={data?.rowCount} isLoading={isLoading} />
+          <DataStatus
+            syncState={data?.syncState}
+            ldaRowCount={data?.ldaRowCount}
+            hasFec={data?.hasFec}
+            isLoading={isLoading}
+          />
         </div>
 
         {isError && (

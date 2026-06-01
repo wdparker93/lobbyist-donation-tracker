@@ -16,24 +16,70 @@ function SortIcon({ active, dir }) {
 }
 
 function DetailDrawer({ senator, onClose }) {
+  const hasFec = senator.fecTotal > 0
+  const fecCycles = Object.entries(senator.fecByCycle ?? {}).sort(([a], [b]) => b - a)
+
   return (
     <tr>
       <td colSpan={6} className="bg-gray-900 px-6 pb-4 pt-2">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-semibold text-white">
-            Recent Contributions to {senator.firstName} {senator.lastName}
+            {senator.firstName} {senator.lastName} — Contribution Breakdown
           </h4>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-xs">Close ✕</button>
         </div>
+
+        {/* Totals summary */}
+        <div className="flex flex-wrap gap-4 mb-3 text-xs">
+          <div className="rounded border border-gray-700 bg-gray-800 px-3 py-2">
+            <div className="text-gray-500 mb-0.5">LDA Direct</div>
+            <div className="font-mono text-green-400">{formatDollarsExact(senator.ldaTotal ?? 0)}</div>
+            <div className="text-gray-600 text-xs">lobbyist LD-203 filings</div>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 px-3 py-2">
+            <div className="text-gray-500 mb-0.5">FEC PAC Money</div>
+            <div className="font-mono text-green-400">{formatDollarsExact(senator.fecPac ?? 0)}</div>
+            <div className="text-gray-600 text-xs">corporate &amp; org PACs</div>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 px-3 py-2">
+            <div className="text-gray-500 mb-0.5">FEC Party</div>
+            <div className="font-mono text-green-400">{formatDollarsExact(senator.fecParty ?? 0)}</div>
+            <div className="text-gray-600 text-xs">party committee transfers</div>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 px-3 py-2 border-blue-800">
+            <div className="text-gray-500 mb-0.5">Combined Total</div>
+            <div className="font-mono text-blue-400 font-semibold">{formatDollarsExact(senator.total ?? 0)}</div>
+            <div className="text-gray-600 text-xs">LDA + FEC PAC + party</div>
+          </div>
+        </div>
+
+        {/* FEC by cycle */}
+        {hasFec && fecCycles.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 mb-1 font-medium">FEC by Election Cycle</p>
+            <div className="flex flex-wrap gap-2">
+              {fecCycles.map(([cycle, d]) => (
+                <div key={cycle} className="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs">
+                  <span className="text-gray-500">{cycle}: </span>
+                  <span className="font-mono text-gray-300">PAC {formatDollars(d.pac)}</span>
+                  {d.party > 0 && <span className="font-mono text-gray-500"> · Party {formatDollars(d.party)}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LDA individual filings */}
+        <p className="text-xs text-gray-500 mb-1 font-medium">LDA Direct Contributions (individual filings)</p>
         {senator.contributions.length === 0 ? (
-          <p className="text-xs text-gray-500">No contribution details available.</p>
+          <p className="text-xs text-gray-600">No individual LDA filings recorded.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
                 <tr className="border-b border-gray-700">
                   <th className="pb-1 pr-4 text-gray-500 font-medium">Registrant</th>
-                  <th className="pb-1 pr-4 text-gray-500 font-medium">Payee (Committee)</th>
+                  <th className="pb-1 pr-4 text-gray-500 font-medium">Payee</th>
                   <th className="pb-1 pr-4 text-gray-500 font-medium">Amount</th>
                   <th className="pb-1 text-gray-500 font-medium">Date</th>
                 </tr>
@@ -50,9 +96,7 @@ function DetailDrawer({ senator, onClose }) {
               </tbody>
             </table>
             {senator.contributions.length > 15 && (
-              <p className="mt-1 text-xs text-gray-600">
-                Showing first 15 of {senator.contributions.length} stored contributions.
-              </p>
+              <p className="mt-1 text-xs text-gray-600">Showing first 15 of {senator.contributions.length} stored.</p>
             )}
           </div>
         )}

@@ -7,15 +7,12 @@ export default function Header() {
             <span className="text-blue-400">⬡</span> Lobbyist Donation Tracker
           </h1>
           <p className="mt-0.5 text-xs text-gray-500">
-            Senate LD-203 filings · Lobbying Disclosure Act of 1995 ·{' '}
-            <a
-              href="https://lda.senate.gov/api/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-400 underline"
-            >
-              Data source
-            </a>
+            <a href="https://lda.senate.gov/api/" target="_blank" rel="noopener noreferrer"
+               className="text-blue-500 hover:text-blue-400 underline">LDA LD-203</a>
+            {' '}(direct lobbyist contributions) ·{' '}
+            <a href="https://api.open.fec.gov/developers/" target="_blank" rel="noopener noreferrer"
+               className="text-blue-500 hover:text-blue-400 underline">FEC</a>
+            {' '}(PAC &amp; party contributions) · updated weekly
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">

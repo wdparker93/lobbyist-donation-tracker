@@ -1,4 +1,4 @@
-name: Weekly LDA Data Sync
+name: Weekly LDA + FEC Data Sync
 
 on:
   schedule:
@@ -6,7 +6,12 @@ on:
   workflow_dispatch:        # Manual trigger from Actions tab
 
 permissions:
-  contents: write           # So the job can commit the updated CSVs
+  contents: write
+
+# FEC_API_KEY must be added as a GitHub Actions secret:
+# Repo → Settings → Secrets and variables → Actions → New repository secret
+# Get a free key at https://api.data.gov/signup/ (1,000 req/hour)
+# Without it the script falls back to DEMO_KEY (30 req/hour — works but slower)
 
 jobs:
   sync:
@@ -21,20 +26,24 @@ jobs:
 
       - run: npm ci
 
-      - name: Run sync script
+      - name: Run LDA sync
         run: node .github/scripts/sync.js
+
+      - name: Run FEC sync
+        run: node .github/scripts/fec_sync.js
+        env:
+          FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
 
       - name: Commit updated data files
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/data/contributions.csv \
+                  public/data/fec_contributions.csv \
                   public/data/sync_state.json \
                   data/unmatched.csv \
                   src/data/senators.js
-          # Only commit if something changed
-          git diff --cached --quiet || git commit -m "chore: weekly LDA data sync $(date -u +%Y-%m-%d)"
+          git diff --cached --quiet || git commit -m "chore: weekly LDA + FEC data sync $(date -u +%Y-%m-%d)"
 
       - name: Push changes
         run: git push
-        # The push above automatically triggers deploy.yml (which fires on push to master)
