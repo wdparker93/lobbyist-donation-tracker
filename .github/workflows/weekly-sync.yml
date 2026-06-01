@@ -30,7 +30,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/data/contributions.csv \
                   public/data/sync_state.json \
-                  data/unmatched.csv
+                  data/unmatched.csv \
+                  src/data/senators.js
           # Only commit if something changed
           git diff --cached --quiet || git commit -m "chore: weekly LDA data sync $(date -u +%Y-%m-%d)"
 

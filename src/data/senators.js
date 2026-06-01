@@ -1,5 +1,6 @@
-// 119th Congress Senate roster (January 2025 – January 2027)
-// Verify current roster at: https://www.senate.gov/senators/
+// Static fallback roster — overwritten automatically by the weekly sync workflow.
+// Source: https://github.com/unitedstates/congress-legislators
+// To update manually: run the Weekly LDA Data Sync workflow in GitHub Actions.
 export const SENATORS = [
   // Alabama
   { id: 'katie-britt', firstName: 'Katie', lastName: 'Britt', state: 'AL', party: 'R', aliases: ['Katie Britt', 'K. Britt'] },

@@ -23,15 +23,46 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..', '..')
 
 const CONTRIBUTIONS_CSV = path.join(ROOT, 'public', 'data', 'contributions.csv')
-const SYNC_STATE_JSON = path.join(ROOT, 'public', 'data', 'sync_state.json')
+const SYNC_STATE_JSON   = path.join(ROOT, 'public', 'data', 'sync_state.json')
 const NAME_OVERRIDES_CSV = path.join(ROOT, 'data', 'name_overrides.csv')
-const UNMATCHED_CSV = path.join(ROOT, 'data', 'unmatched.csv')
-const SENATORS_JS = path.join(ROOT, 'src', 'data', 'senators.js')
+const UNMATCHED_CSV     = path.join(ROOT, 'data', 'unmatched.csv')
+const SENATORS_JS       = path.join(ROOT, 'src', 'data', 'senators.js')
 
-const LDA_BASE = 'https://lda.senate.gov/api/v1/contributions/'
-const PAGE_SIZE = 100
+const LEGISLATORS_URL = 'https://unitedstates.github.io/congress-legislators/legislators-current.json'
+const LDA_BASE   = 'https://lda.senate.gov/api/v1/contributions/'
+const PAGE_SIZE  = 100
 const MAX_PARALLEL = 5
-const FUZZY_THRESHOLD = 0.75   // minimum similarity score to auto-match
+const FUZZY_THRESHOLD = 0.75
+
+const PARTY_ABBREV = { Democrat: 'D', Republican: 'R', Independent: 'I' }
+
+const STATES = [
+  { code: 'AL', name: 'Alabama' },    { code: 'AK', name: 'Alaska' },
+  { code: 'AZ', name: 'Arizona' },    { code: 'AR', name: 'Arkansas' },
+  { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' },{ code: 'DE', name: 'Delaware' },
+  { code: 'FL', name: 'Florida' },    { code: 'GA', name: 'Georgia' },
+  { code: 'HI', name: 'Hawaii' },     { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' },   { code: 'IN', name: 'Indiana' },
+  { code: 'IA', name: 'Iowa' },       { code: 'KS', name: 'Kansas' },
+  { code: 'KY', name: 'Kentucky' },   { code: 'LA', name: 'Louisiana' },
+  { code: 'ME', name: 'Maine' },      { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' },{ code: 'MI', name: 'Michigan' },
+  { code: 'MN', name: 'Minnesota' },  { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' },   { code: 'MT', name: 'Montana' },
+  { code: 'NE', name: 'Nebraska' },   { code: 'NV', name: 'Nevada' },
+  { code: 'NH', name: 'New Hampshire' },{ code: 'NJ', name: 'New Jersey' },
+  { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' },{ code: 'ND', name: 'North Dakota' },
+  { code: 'OH', name: 'Ohio' },       { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' },     { code: 'PA', name: 'Pennsylvania' },
+  { code: 'RI', name: 'Rhode Island' },{ code: 'SC', name: 'South Carolina' },
+  { code: 'SD', name: 'South Dakota' },{ code: 'TN', name: 'Tennessee' },
+  { code: 'TX', name: 'Texas' },      { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' },    { code: 'VA', name: 'Virginia' },
+  { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' },  { code: 'WY', name: 'Wyoming' },
+]
 
 // ── Levenshtein similarity (0–1) ─────────────────────────────────────────────
 function similarity(a, b) {
@@ -71,7 +102,74 @@ function splitCompoundName(raw) {
     .filter(p => p.length > 2)
 }
 
+// ── Fetch current senator roster and regenerate senators.js ──────────────────
+function toSlug(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+async function fetchAndWriteSenatorRoster() {
+  console.log('\n-- Updating senator roster from unitedstates/congress-legislators --')
+  const res = await fetch(LEGISLATORS_URL)
+  if (!res.ok) throw new Error(`Legislators fetch failed: ${res.status}`)
+  const all = await res.json()
+
+  const senators = all
+    .filter(m => m.terms.at(-1)?.type === 'sen')
+    .map(m => {
+      const term = m.terms.at(-1)
+      const displayFirst = m.name.nickname || m.name.first
+      const last = m.name.last
+      const id = toSlug(`${displayFirst} ${last}`)
+
+      // Collect all known name forms as aliases for the matcher
+      const aliasSet = new Set([
+        `${displayFirst} ${last}`,
+        `${m.name.first} ${last}`,
+        m.name.official_full,
+        m.name.nickname ? `${m.name.nickname} ${last}` : null,
+      ].filter(Boolean))
+
+      return {
+        id,
+        firstName: displayFirst,
+        lastName: last,
+        state: term.state,
+        party: PARTY_ABBREV[term.party] ?? 'I',
+        bioguide: m.id.bioguide,
+        aliases: [...aliasSet],
+      }
+    })
+    .sort((a, b) => a.state.localeCompare(b.state) || a.lastName.localeCompare(b.lastName))
+
+  console.log(`  ${senators.length} current senators`)
+
+  // Regenerate src/data/senators.js so the next Vite build picks up fresh data
+  const entries = senators.map(s => {
+    const esc = v => v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    const aliases = s.aliases.map(a => `'${esc(a)}'`).join(', ')
+    return `  { id: '${s.id}', firstName: '${esc(s.firstName)}', lastName: '${esc(s.lastName)}', state: '${s.state}', party: '${s.party}', bioguide: '${s.bioguide}', aliases: [${aliases}] },`
+  }).join('\n')
+
+  const statesEntries = STATES.map(s => `  { code: '${s.code}', name: '${s.name}' },`).join('\n')
+
+  const js = `// Auto-generated by .github/scripts/sync.js — do not edit manually.
+// Source: https://github.com/unitedstates/congress-legislators
+// Updated: ${new Date().toISOString().slice(0, 10)}
+export const SENATORS = [
+${entries}
+]
+
+export const STATES = [
+${statesEntries}
+]
+`
+  fs.writeFileSync(SENATORS_JS, js)
+  console.log(`  Wrote src/data/senators.js`)
+  return senators
+}
+
 // ── Load senator roster from senators.js (parse the export statically) ───────
+// Used only as a fallback if the live fetch fails.
 function loadSenators() {
   const src = fs.readFileSync(SENATORS_JS, 'utf8')
   // Quick-and-dirty extraction: find SENATORS array entries
@@ -270,8 +368,14 @@ async function main() {
   console.log(`\n=== LDA Sync — ${now.toISOString()} ===`)
   console.log(`Years window: ${yearsToSync[0]}–${yearsToSync.at(-1)} (${LOOKBACK_YEARS}-year lookback)`)
 
-  const senators = loadSenators()
-  console.log(`Loaded ${senators.length} senators`)
+  let senators
+  try {
+    senators = await fetchAndWriteSenatorRoster()
+  } catch (err) {
+    console.warn(`  Roster fetch failed (${err.message}), falling back to static senators.js`)
+    senators = loadSenators()
+  }
+  console.log(`Using ${senators.length} senators`)
 
   const overrides = loadOverrides()
   console.log(`Loaded ${overrides.size} name overrides`)
