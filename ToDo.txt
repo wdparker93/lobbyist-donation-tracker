@@ -4,8 +4,53 @@ DONE 3. Get monetary contribution data into the DB
 DONE 4. Get congress member voting data into the DB
 ???? 5. Find a way to compare donations/bribes with the way the congress people voted.
   a. Charts, graphs, etc.
-6. Get app hosted on Heroku (cloud).
+DONE 6. Get app hosted on GitHub Pages (cloud).
 DONE 7. Display loading animation while waiting on SQL results.
 DONE 8. Finish query building when using multiple selection criteria.
-9. Review and sanitize contribution data before publication.
-???? 10. Improve DB security before publication.
+DONE 9. Replaced MySQL backend with automated weekly CSV sync from LDA API.
+DONE 10. DB security no longer relevant — no backend, no credentials.
+
+---- FEC Data Integration -------------------------------------------------------
+
+TODO 11. Add FEC API as a second data source to capture the full picture of
+         lobbyist money flowing to senators (LD-203 only covers direct personal
+         contributions from named lobbyists; the rest lives in FEC data).
+
+  a. Register for a free FEC API key at https://api.open.fec.gov/developers/
+     - Free, no cost, generous rate limits
+
+  b. Relevant FEC endpoints:
+     - /schedules/schedule_a/ — individual contributions TO candidates
+       Filter by: contributor_type, recipient (senator FEC ID), date range
+     - /schedules/schedule_b/ — disbursements FROM committees (less relevant)
+     - /candidates/              — look up senator FEC candidate IDs
+     - /committees/              — look up senator campaign committee IDs
+
+  c. Linking FEC data to our senator roster:
+     - Each senator has a bioguide ID (now stored in senators.js from
+       unitedstates/congress-legislators)
+     - The legislators-current.json also includes FEC IDs under id.fec (array)
+     - Use those FEC IDs to query /schedules/schedule_a/ filtered by candidate
+
+  d. What FEC captures that LD-203 misses:
+     - Leadership PAC contributions (e.g. "MAJORITY COMMITTEE PAC")
+     - Party committee contributions (DSCC, NRSC) attributed back to senators
+     - Bundled contributions
+     - Corporate PAC contributions
+     - In aggregate this is likely 5–20x the LD-203 direct contribution totals
+
+  e. Integration approach:
+     - Add a fec_sync.js script alongside sync.js in .github/scripts/
+     - Run it in the same weekly-sync.yml workflow after the LDA sync
+     - Write results to public/data/fec_contributions.csv (separate file,
+       same schema as contributions.csv but with source="fec" column)
+     - Merge both CSVs in useContributions.js and aggregate together
+     - Add a source filter in the UI (LDA only / FEC only / Both)
+
+  f. Rate limits & pagination:
+     - FEC API: 1,000 requests/hour with API key, 100 results/page
+     - With ~100 senators × multiple election cycles this is very manageable
+     - Cache api_count_by_year the same way as the LDA sync
+
+  g. Name matching not needed for FEC — query by FEC candidate ID directly,
+     so results are exact. No fuzzy matching required.
