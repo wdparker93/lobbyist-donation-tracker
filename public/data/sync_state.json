@@ -1,10 +1,16 @@
 {
-  "last_synced_at": "2026-06-01T01:01:41.555Z",
+  "last_synced_at": "2026-06-01T01:24:50.090Z",
   "lookback_years": 5,
-  "api_count_by_year": {},
+  "api_count_by_year": {
+    "2022": 38473,
+    "2023": 38871,
+    "2024": 38818,
+    "2025": 39948,
+    "2026": 234
+  },
   "stats": {
-    "total_rows": 7,
-    "total_matched": 7,
-    "total_unmatched": 14
+    "total_rows": 1885,
+    "total_matched": 1885,
+    "total_unmatched": 2964
   }
 }
