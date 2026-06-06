@@ -19,6 +19,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+// Polyfill fetch for Node < 18 (no-op in CI where native fetch is available)
+if (!globalThis.fetch) {
+  const { default: nodeFetch } = await import('node-fetch')
+  globalThis.fetch = nodeFetch
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..', '..')
 
@@ -116,9 +122,9 @@ async function fetchAndWriteSenatorRoster() {
   const all = await res.json()
 
   const senators = all
-    .filter(m => m.terms.at(-1)?.type === 'sen')
+    .filter(m => m.terms[m.terms.length - 1]?.type === 'sen')
     .map(m => {
-      const term = m.terms.at(-1)
+      const term = m.terms[m.terms.length - 1]
       const displayFirst = m.name.nickname || m.name.first
       const last = m.name.last
       const id = toSlug(`${displayFirst} ${last}`)
@@ -380,7 +386,7 @@ async function main() {
   const yearsToSync = Array.from({ length: LOOKBACK_YEARS }, (_, i) => currentYear - (LOOKBACK_YEARS - 1 - i))
 
   console.log(`\n=== LDA Sync — ${now.toISOString()} ===`)
-  console.log(`Years window: ${yearsToSync[0]}–${yearsToSync.at(-1)} (${LOOKBACK_YEARS}-year lookback)`)
+  console.log(`Years window: ${yearsToSync[0]}–${yearsToSync[yearsToSync.length - 1]} (${LOOKBACK_YEARS}-year lookback)`)
 
   let senators
   try {
