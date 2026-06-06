@@ -1,5 +1,5 @@
 {
-  "last_synced_at": "2026-06-06T18:32:49.324Z",
+  "last_synced_at": "2026-06-06T19:05:05.664Z",
   "lookback_years": 5,
   "api_count_by_year": {
     "2022": 38473,
@@ -12,5 +12,14 @@
     "total_rows": 2430,
     "total_matched": 2430,
     "total_unmatched": 2498
+  },
+  "fec_last_synced_at": "2026-06-06T19:05:11.027Z",
+  "fec_cycles_synced": [
+    2022,
+    2024,
+    2026
+  ],
+  "fec_stats": {
+    "total_rows": 0
   }
 }
