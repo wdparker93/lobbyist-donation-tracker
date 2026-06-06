@@ -85,9 +85,11 @@ function similarity(a, b) {
 function normalizeName(name) {
   return name
     .toLowerCase()
-    .replace(/^(the\s+)?honorable\s+/i, '')
+    .replace(/\([^)]*\)/g, '')             // strip parentheticals: (R-OK), (D-NY)
+    .replace(/\bfriends\s+of\s*/gi, '')    // strip "Friends of"
+    .replace(/(the\s+)?honorable\s+/gi, '') // strip "The Honorable" / "Honorable" anywhere
     // Longer alternatives must come before their prefixes (senator before sen.)
-    .replace(/\b(senator|representative|sen\.?|rep\.?|dr\.?|mr\.?|ms\.?|mrs\.?)\s*/gi, '')
+    .replace(/\b(senator|representative|congressman|congresswoman|sen\.?|rep\.?|cong\.?|u\.?s\.?|dr\.?|mr\.?|ms\.?|mrs\.?)\s*/gi, '')
     .replace(/\b[a-z]\.\s*/g, '')          // strip lone initials: "J. "
     .replace(/[^a-z\s\-]/g, '')            // strip punctuation except hyphens
     .replace(/\s+/g, ' ')
