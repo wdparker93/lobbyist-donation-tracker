@@ -1,19 +1,19 @@
 {
-  "last_synced_at": "2026-07-06T11:38:36.567Z",
+  "last_synced_at": "2026-07-13T10:29:11.554Z",
   "lookback_years": 5,
   "api_count_by_year": {
-    "2022": 38474,
-    "2023": 38875,
-    "2024": 38830,
-    "2025": 40084,
-    "2026": 1262
+    "2022": 38488,
+    "2023": 38894,
+    "2024": 38833,
+    "2025": 40093,
+    "2026": 3143
   },
   "stats": {
-    "total_rows": 2457,
-    "total_matched": 2457,
-    "total_unmatched": 2500
+    "total_rows": 2468,
+    "total_matched": 2468,
+    "total_unmatched": 2505
   },
-  "fec_last_synced_at": "2026-07-06T11:38:53.262Z",
+  "fec_last_synced_at": "2026-07-13T10:29:27.345Z",
   "fec_cycles_synced": [
     2022,
     2024,
